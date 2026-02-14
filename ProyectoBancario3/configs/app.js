@@ -17,6 +17,7 @@ import {
 } from '../middlewares/server-genericError-handler.js';
 import authRoutes from '../src/auth/auth.routes.js';
 import userRoutes from '../src/users/user.routes.js';
+import userRoute from '../src/Clientes/clientes.routes.js';
 
 const BASE_PATH = '/api/v1';
 
