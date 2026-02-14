@@ -1,6 +1,6 @@
 import { asyncHandler } from '../../middlewares/server-genericError-handler.js';
 import { validateJWT } from '../../middlewares/validate-JWT.js';
-import { findUserById } from '../../helpers/user-db.js';
+import { findUserById, getAllUsersPublic } from '../../helpers/user-db.js';
 import {
   getUserRoleNames,
   getUsersByRole as repoGetUsersByRole,
@@ -18,6 +18,21 @@ const ensureAdmin = async (req) => {
     (await getUserRoleNames(currentUserId));
   return roles.includes(ADMIN_ROLE);
 };
+
+/**
+ * Controller para obtener todos los usuarios (público - SIN autenticación)
+ * GET /api/v1/users
+ */
+export const getAllUsers = asyncHandler(async (req, res) => {
+  const users = await getAllUsersPublic();
+
+  return res.status(200).json({
+    success: true,
+    message: 'Usuarios obtenidos exitosamente',
+    users: users.map((user) => buildUserResponse(user)),
+    total: users.length,
+  });
+});
 
 export const updateUserRole = [
   validateJWT,

@@ -11,14 +11,12 @@ import '../src/auth/role.model.js';
 import { requestLimit } from '../middlewares/request-limit.js';
 import { corsOptions } from './cors-configuration.js';
 import { helmetConfiguration } from './helmet-configuration.js';
-
 import {
   errorHandler,
   notFound,
 } from '../middlewares/server-genericError-handler.js';
 import authRoutes from '../src/auth/auth.routes.js';
 import userRoutes from '../src/users/user.routes.js';
-import adminRoutes from '../src/admin/admin.routes.js';
 
 const BASE_PATH = '/api/v1';
 
@@ -34,7 +32,6 @@ const middlewares = (app) => {
 const routes = (app) => {
   app.use(`${BASE_PATH}/auth`, authRoutes);
   app.use(`${BASE_PATH}/users`, userRoutes);
-  app.use(`${BASE_PATH}/admin`, adminRoutes);
 
   app.get(`${BASE_PATH}/health`, (req, res) => {
     res.status(200).json({

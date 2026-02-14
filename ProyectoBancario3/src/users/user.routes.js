@@ -1,11 +1,14 @@
 import { Router } from 'express';
 import {
+  getAllUsers,
   updateUserRole,
   getUserRoles,
   getUsersByRole,
 } from './user.controller.js';
 
 const router = Router();
+
+router.get('/', getAllUsers);
 
 // PUT /api/v1/users/:userId/role
 router.put('/:userId/role', ...updateUserRole);

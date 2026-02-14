@@ -368,3 +368,29 @@ export const updateUserPassword = async (userId, hashedPassword) => {
     throw new Error('Error al actualizar contraseña');
   }
 };
+
+/**
+ * Helper para obtener todos los usuarios (público)
+ * @returns {Promise<Array>} Lista de usuarios
+ */
+export const getAllUsersPublic = async () => {
+  try {
+    const users = await User.findAll({
+      include: [
+        { model: UserProfile, as: 'UserProfile' },
+        { model: UserEmail, as: 'UserEmail' },
+        {
+          model: UserRole,
+          as: 'UserRoles',
+          include: [{ model: Role, as: 'Role' }],
+        },
+      ],
+      order: [['CreatedAt', 'DESC']],
+    });
+
+    return users;
+  } catch (error) {
+    console.error('Error obteniendo usuarios:', error);
+    throw new Error('Error al obtener usuarios');
+  }
+};
