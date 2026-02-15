@@ -33,6 +33,7 @@ const middlewares = (app) => {
 const routes = (app) => {
   app.use(`${BASE_PATH}/auth`, authRoutes);
   app.use(`${BASE_PATH}/users`, userRoutes);
+  app.use(`${BASE_PATH}/clientes`, userRoute);
 
   app.get(`${BASE_PATH}/health`, (req, res) => {
     res.status(200).json({
