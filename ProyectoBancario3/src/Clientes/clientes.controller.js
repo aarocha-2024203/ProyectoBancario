@@ -75,44 +75,46 @@ export const getUserById = async (req, res) => {
 
 // Crear usuario (solo CLIENT por defecto, ADMIN debe crearse manualmente en DB)
 export const createUser = async (req, res) => {
-    try {
-        const userData = req.body;
-        
-        // Validar ingresos mínimos
-        if (userData.monthlyIncome < 100) {
-            return res.status(400).json({
-                success: false,
-                message: 'Los ingresos mensuales deben ser mayores o iguales a Q100'
-            });
-        }
+  try {
+    console.log('BODY RECIBIDO:', req.body);
 
-        // Encriptar contraseña
-        const salt = await bcrypt.genSalt(10);
-        userData.password = await bcrypt.hash(userData.password, salt);
+    const userData = req.body;
 
-        // Por defecto es CLIENT
-        userData.role = 'CLIENT';
-
-        const user = new User(userData);
-        await user.save();
-
-        // No enviar password en respuesta
-        const userResponse = user.toObject();
-        delete userResponse.password;
-
-        res.status(201).json({
-            success: true,
-            message: 'Usuario creado exitosamente',
-            data: userResponse
-        });
-
-    } catch (error) {
-        res.status(400).json({
-            success: false,
-            message: 'Error al crear el usuario',
-            error: error.message
-        });
+    if (userData.monthlyIncome < 100) {
+      return res.status(400).json({
+        success: false,
+        message: 'Los ingresos mensuales deben ser mayores o iguales a Q100'
+      });
     }
+
+    const salt = await bcrypt.genSalt(10);
+    userData.password = await bcrypt.hash(userData.password, salt);
+    userData.role = 'CLIENT';
+
+    const user = new User(userData);
+
+    const savedUser = await user.save();
+
+    console.log('USUARIO GUARDADO EN MONGO:', savedUser);
+
+    const userResponse = savedUser.toObject();
+    delete userResponse.password;
+
+    res.status(201).json({
+      success: true,
+      message: 'Usuario creado exitosamente',
+      data: userResponse
+    });
+
+  } catch (error) {
+    console.error('ERROR MONGODB:', error);
+
+    res.status(400).json({
+      success: false,
+      message: 'Error al crear el usuario',
+      error: error.message
+    });
+  }
 };
 
 // Actualizar usuario (sin DPI ni password)
