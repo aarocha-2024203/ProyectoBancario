@@ -4,9 +4,9 @@ import mongoose from 'mongoose';
 
 const favoritosSchema = mongoose.Schema({
     user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: [true, 'El usuario es requerido']
+        type: String,  // Ahora acepta el ID de PostgreSQL
+        required: [true, 'El usuario es requerido'],
+        index: true
     },
     accountNumber: {
         type: String,
