@@ -18,8 +18,9 @@ import {
 import authRoutes from '../src/auth/auth.routes.js';
 import userRoutes from '../src/users/user.routes.js';
 import userRoute from '../src/Clientes/clientes.routes.js';
-import favoritosRoute from '../src/Favoritos/favoritos.routes.js';
-
+import productoRoute from '../src/Productos/producto.routes.js';
+import transactionRoutes from '../src/Transacciones/transaction.routes.js';
+import favoritosRoute from '../src/Favoritos/favoritos.routes.js'; 
 
 const BASE_PATH = '/api/v1';
 
@@ -33,10 +34,14 @@ const middlewares = (app) => {
 };
 
 const routes = (app) => {
-  app.use(`${BASE_PATH}/auth`, authRoutes);
-  app.use(`${BASE_PATH}/users`, userRoutes);
+  app.use(${BASE_PATH}/auth, authRoutes);
+  app.use(${BASE_PATH}/users, userRoutes);
+  app.use(${BASE_PATH}/clientes, userRoute);
+  app.use(${BASE_PATH}/productos, productoRoute);
+  app.use(${BASE_PATH}/transactions, transactionRoutes);
+  app.use(${BASE_PATH}/favoritos, favoritosRoute);
   
-  app.get(`${BASE_PATH}/health`, (req, res) => {
+  app.get(${BASE_PATH}/health, (req, res) => {
     res.status(200).json({
       status: 'Healthy',
       timestamp: new Date().toISOString(),
@@ -63,11 +68,11 @@ export const initServer = async () => {
     app.use(errorHandler);
 
     app.listen(PORT, () => {
-      console.log(`Proyecto Bancario Auth Server running on port ${PORT}`);
-      console.log(`Health check: http://localhost:${PORT}${BASE_PATH}/health`);
+      console.log(Proyecto Bancario Auth Server running on port ${PORT});
+      console.log(Health check: http://localhost:${PORT}${BASE_PATH}/health);
     });
   } catch (err) {
-    console.error(`Error starting Proyecto Bancario Auth Server: ${err.message}`);
+    console.error(Error starting Proyecto Bancario Auth Server: ${err.message});
     process.exit(1);
   }
 };
