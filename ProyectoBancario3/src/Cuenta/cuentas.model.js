@@ -1,7 +1,7 @@
 'use strict';
-
+ 
 import mongoose from 'mongoose';
-
+ 
 const cuentaSchema = mongoose.Schema({
     numeroCuenta: {
         type: String,
@@ -41,9 +41,9 @@ const cuentaSchema = mongoose.Schema({
         default: 0
     },
     cliente: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: [true, 'El cliente es requerido']
+        type: String,  // ← CAMBIO AQUÍ
+        required: [true, 'El cliente es requerido'],
+        index: true
     },
     fechaApertura: {
         type: Date,
@@ -75,12 +75,12 @@ const cuentaSchema = mongoose.Schema({
     timestamps: true,
     versionKey: false
 });
-
+ 
 // Índices para búsquedas frecuentes
 cuentaSchema.index({ numeroCuenta: 1 });
 cuentaSchema.index({ cliente: 1 });
 cuentaSchema.index({ tipoCuenta: 1 });
 cuentaSchema.index({ estado: 1 });
 cuentaSchema.index({ moneda: 1 });
-
+ 
 export default mongoose.model('Cuenta', cuentaSchema);
