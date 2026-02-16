@@ -137,3 +137,42 @@ export const validateResetPassword = [
 
   handleValidationErrors,
 ];
+<<<<<<< HEAD
+=======
+
+export const isAdmin = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(500).json({
+        success: false,
+        message: 'Debe validar el token primero'
+      });
+    }
+
+    // Importar modelos necesarios
+    const { UserRole } = await import('../src/auth/role.model.js');
+    const { Role } = await import('../src/auth/role.model.js');
+
+// Buscar el rol del usuario desde la tabla user_roles
+    const userRole = await UserRole.findOne({
+      where: { UserId: req.user.Id },
+      include: [{ model: Role, as: 'Role' }]
+    });
+
+    if (!userRole || userRole.Role?.Name !== 'ADMIN_ROLE') {
+      return res.status(403).json({
+        success: false,
+        message: 'Solo administradores pueden realizar esta acción'
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Error en isAdmin:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+>>>>>>> origin/ft-squezada
