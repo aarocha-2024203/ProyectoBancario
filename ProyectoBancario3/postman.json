@@ -187,7 +187,7 @@
               }
             },
             "url": {
-              "raw": "http://localhost:3005/api/auth/forgot-password",
+              "raw": "http://localhost:3005/api/v1/auth/forgot-password",
               "protocol": "http",
               "host": [
                 "localhost"
@@ -195,6 +195,7 @@
               "port": "3005",
               "path": [
                 "api",
+                "v1",
                 "auth",
                 "forgot-password"
               ]
