@@ -1,0 +1,504 @@
+{
+  "info": {
+    "_postman_id": "85909953-3589-412c-bfca-7d1db62a4ed7",
+    "name": "ProyectoBancario",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "48332520",
+    "_collection_link": "https://go.postman.co/collection/48332520-85909953-3589-412c-bfca-7d1db62a4ed7?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Autentificación",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Alejandro",
+                  "type": "text",
+                  "uuid": "abd4919a-12c1-42f8-9b5a-58e08777b1e6"
+                },
+                {
+                  "key": "surname",
+                  "value": "Arocha",
+                  "type": "text",
+                  "uuid": "77403613-e2e1-47a3-8744-71a40b0581f5"
+                },
+                {
+                  "key": "username",
+                  "value": "Alejoap365",
+                  "type": "text",
+                  "uuid": "2d80689a-f74c-4508-9e34-5cb449cfe378"
+                },
+                {
+                  "key": "email",
+                  "value": "alejandroarochavirula@gmail.com",
+                  "type": "text",
+                  "uuid": "9a49a1de-8480-43e7-9d0a-ce07a305e2df"
+                },
+                {
+                  "key": "password",
+                  "value": "Lolita151223",
+                  "type": "text",
+                  "uuid": "1642bca5-d0fc-44f2-94c6-98e955eab3ac"
+                },
+                {
+                  "key": "phone",
+                  "value": "42653798",
+                  "type": "text",
+                  "uuid": "d979400e-608e-421b-9e77-2418390d384b"
+                },
+                {
+                  "key": "profilePicture",
+                  "type": "file",
+                  "uuid": "1b06eab3-532c-409a-a743-959b7a2574f1",
+                  "src": "/C:/Users/estua/Downloads/moni.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:3005/api/v1/auth/register",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3005",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "resend-verification",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"email\": \"alejandroarochavirula@gmail.com\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3005/api/v1/auth/resend-verification",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3005",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "resend-verification"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "verify-email",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"token\": \"TOKEN_DEL_CORREO\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3005/api/v1/auth/verify-email",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3005",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "verify-email"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"emailOrUsername\": \"alejandroarochavirula@gmail.com\",\r\n  \"password\": \"Lolita151223\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3005/api/v1/auth/login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3005",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "forgot-password",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"email\": \"alejandroarochavirula@gmail.com\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3005/api/auth/forgot-password",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3005",
+              "path": [
+                "api",
+                "auth",
+                "forgot-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "reset-password",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"token\": \"TOKEN_DEL_CORREO\",\r\n  \"newPassword\": \"NuevaPassword123\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3005/api/v1/auth/reset-password",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3005",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "reset-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "users-list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Entidates",
+      "item": [
+        {
+          "name": "Clientes",
+          "item": [
+            {
+              "name": "Agregar Clientes",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"name\": \"Juan Pérezcvxv\",\r\n    \"username\": \"juanperezcvc\",\r\n    \"dpi\": 123456789010,\r\n    \"address\": \"Ciudad de Guatemala, Zona 10\",\r\n    \"phone\": 5555123,\r\n    \"email\": \"jujjdbj@example.com\",\r\n    \"password\": \"MiPassword123\",\r\n    \"jobName\": \"Ingeniero de Software\",\r\n    \"monthlyIncome\": 5000\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:3005/api/v1/clientes",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3005",
+                  "path": [
+                    "api",
+                    "v1",
+                    "clientes"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Listar Clientes",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": ""
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Transacciones",
+          "item": [
+            {
+              "name": "Agregar Transaccion",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{vault:authorization-secret}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"fromAccountNumber\": \"ACC-1234567890-5678\",\r\n  \"toAccountNumber\": \"ACC-9876543210-4321\",\r\n  \"amount\": 500,\r\n  \"description\": \"Pago de renta\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:3005/api/v1/transactions",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3005",
+                  "path": [
+                    "api",
+                    "v1",
+                    "transactions"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Listar Transaccion",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": ""
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Productos",
+          "item": [
+            {
+              "name": "Agregar Productos",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"name\": \"Zapatos deportivos\",\r\n  \"description\": \"Nike originales\",\r\n  \"category\": \"Calzado\",\r\n  \"price\": 450,\r\n  \"stock\": 10,\r\n  \"type\": \"PRODUCTO\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "http://localhost:3005/api/v1/productos",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3005",
+                  "path": [
+                    "api",
+                    "v1",
+                    "productos"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Listar Productos",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "http://localhost:3005/api/v1/productos",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3005",
+                  "path": [
+                    "api",
+                    "v1",
+                    "productos"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Favoritos",
+          "item": [
+            {
+              "name": "Agregar Favoritos",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "http://localhost:3005/api/v1/favoritos",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3005",
+                  "path": [
+                    "api",
+                    "v1",
+                    "favoritos"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Listar Favoritos",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "http://localhost:3005/api/v1/favoritos",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3005",
+                  "path": [
+                    "api",
+                    "v1",
+                    "favoritos"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Cuentas",
+          "item": [
+            {
+              "name": "Agregar Cuentas",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "http://localhost:3005/api/v1/favoritos",
+                  "protocol": "http",
+                  "host": [
+                    "localhost"
+                  ],
+                  "port": "3005",
+                  "path": [
+                    "api",
+                    "v1",
+                    "favoritos"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Listar Cuentas",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": ""
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
