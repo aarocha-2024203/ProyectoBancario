@@ -137,8 +137,6 @@ export const validateResetPassword = [
 
   handleValidationErrors,
 ];
-<<<<<<< HEAD
-=======
 
 export const isAdmin = async (req, res, next) => {
   try {
@@ -153,7 +151,7 @@ export const isAdmin = async (req, res, next) => {
     const { UserRole } = await import('../src/auth/role.model.js');
     const { Role } = await import('../src/auth/role.model.js');
 
-// Buscar el rol del usuario desde la tabla user_roles
+    // Buscar el rol del usuario desde la tabla user_roles
     const userRole = await UserRole.findOne({
       where: { UserId: req.user.Id },
       include: [{ model: Role, as: 'Role' }]
@@ -175,4 +173,3 @@ export const isAdmin = async (req, res, next) => {
     });
   }
 };
->>>>>>> origin/ft-squezada
