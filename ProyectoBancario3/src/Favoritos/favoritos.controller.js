@@ -2,7 +2,6 @@
 
 import Favorito from './favoritos.model.js';
 
-
 export const createFavorito = async (req, res) => {
     try {
         const { accountNumber, accountType, alias } = req.body;
@@ -15,7 +14,7 @@ export const createFavorito = async (req, res) => {
         }
 
         const favorito = new Favorito({
-            user: req.user.id,
+            user: req.user.Id,
             accountNumber,
             accountType,
             alias,
@@ -39,11 +38,10 @@ export const createFavorito = async (req, res) => {
     }
 };
 
-
 export const getFavoritos = async (req, res) => {
     try {
         const favoritos = await Favorito.find({
-            user: req.user.id,
+            user: req.user.Id,
             isActive: true
         });
 
@@ -67,7 +65,7 @@ export const getFavoritoById = async (req, res) => {
 
         const favorito = await Favorito.findOne({
             _id: id,
-            user: req.user.id,
+            user: req.user.Id,
             isActive: true
         });
 
@@ -98,7 +96,7 @@ export const updateFavorito = async (req, res) => {
         const { alias } = req.body;
 
         const favorito = await Favorito.findOneAndUpdate(
-            { _id: id, user: req.user.id },
+            { _id: id, user: req.user.Id },
             { alias },
             { new: true }
         );
@@ -131,7 +129,7 @@ export const deleteFavorito = async (req, res) => {
 
         const favorito = await Favorito.findOne({
             _id: id,
-            user: req.user.id
+            user: req.user.Id
         });
 
         if (!favorito) {
@@ -164,7 +162,7 @@ export const transferFromFavorito = async (req, res) => {
 
         const favorito = await Favorito.findOne({
             _id: favoriteId,
-            user: req.user.id,
+            user: req.user.Id,
             isActive: true
         });
 
