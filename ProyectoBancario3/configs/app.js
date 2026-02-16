@@ -18,7 +18,11 @@ import {
 import authRoutes from '../src/auth/auth.routes.js';
 import userRoutes from '../src/users/user.routes.js';
 import userRoute from '../src/Clientes/clientes.routes.js';
+import productoRoute from '../src/Productos/producto.routes.js';
 import transactionRoutes from '../src/Transacciones/transaction.routes.js';
+import favoritosRoute from '../src/Favoritos/favoritos.routes.js'; 
+import cuentasRoutes from '../src/Cuenta/cuentas.routes.js';
+
 const BASE_PATH = '/api/v1';
 
 const middlewares = (app) => {
@@ -34,8 +38,11 @@ const routes = (app) => {
   app.use(`${BASE_PATH}/auth`, authRoutes);
   app.use(`${BASE_PATH}/users`, userRoutes);
   app.use(`${BASE_PATH}/clientes`, userRoute);
+  app.use(`${BASE_PATH}/productos`, productoRoute);
   app.use(`${BASE_PATH}/transactions`, transactionRoutes);
-
+  app.use(`${BASE_PATH}/favoritos`, favoritosRoute);
+  app.use(`${BASE_PATH}/Cuenta`, cuentasRoutes);
+  
   app.get(`${BASE_PATH}/health`, (req, res) => {
     res.status(200).json({
       status: 'Healthy',
@@ -54,9 +61,15 @@ export const initServer = async () => {
 
   try {
     await dbConnection();
+    
     // Seed essential data (roles)
     const { seedRoles } = await import('../helpers/role-seed.js');
     await seedRoles();
+    
+    // Asegurar que el usuario admin tenga rol ADMIN_ROLE
+    const { ensureAdminUser } = await import('../helpers/admin-seed.js');
+    await ensureAdminUser();
+    
     middlewares(app);
     routes(app);
 

@@ -1,6 +1,7 @@
 'use strict';
 
 import Transaction from './transaction.model.js';
+import Account from '../Cuenta/cuentas.model.js';
 import mongoose from 'mongoose';
 
 // Listar transacciones
@@ -33,20 +34,6 @@ export const getTransactions = async (req, res) => {
         }
 
         const transactions = await Transaction.find(filter)
-            .populate({
-                path: 'fromAccount',
-                populate: {
-                    path: 'userId',
-                    select: 'name username'
-                }
-            })
-            .populate({
-                path: 'toAccount',
-                populate: {
-                    path: 'userId',
-                    select: 'name username'
-                }
-            })
             .limit(parseInt(limit))
             .skip((parseInt(page) - 1) * parseInt(limit))
             .sort({ createdAt: -1 });
@@ -78,22 +65,7 @@ export const getTransactionById = async (req, res) => {
     try {
         const { id } = req.params;
         
-        const transaction = await Transaction.findById(id)
-            .populate({
-                path: 'fromAccount',
-                populate: {
-                    path: 'userId',
-                    select: 'name username'
-                }
-            })
-            .populate({
-                path: 'toAccount',
-                populate: {
-                    path: 'userId',
-                    select: 'name username'
-                }
-            })
-            .populate('originalTransactionId');
+        const transaction = await Transaction.findById(id);
 
         if (!transaction) {
             return res.status(404).json({
@@ -129,20 +101,6 @@ export const getLastTransactionsByAccount = async (req, res) => {
             ],
             status: { $ne: 'REVERSED' }
         })
-        .populate({
-            path: 'fromAccount',
-            populate: {
-                path: 'userId',
-                select: 'name'
-            }
-        })
-        .populate({
-            path: 'toAccount',
-            populate: {
-                path: 'userId',
-                select: 'name'
-            }
-        })
         .limit(parseInt(limit))
         .sort({ createdAt: -1 });
 
@@ -160,18 +118,13 @@ export const getLastTransactionsByAccount = async (req, res) => {
     }
 };
 
-// Realizar transferencia
+// Realizar transferencia (SIN transacciones de MongoDB)
 export const createTransfer = async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
         const { fromAccountNumber, toAccountNumber, amount, description } = req.body;
 
         // Validar monto mínimo
         if (amount <= 0) {
-            await session.abortTransaction();
-            session.endSession();
             return res.status(400).json({
                 success: false,
                 message: 'El monto debe ser mayor a 0'
@@ -180,8 +133,6 @@ export const createTransfer = async (req, res) => {
 
         // Validar monto máximo por transferencia
         if (amount > 2000) {
-            await session.abortTransaction();
-            session.endSession();
             return res.status(400).json({
                 success: false,
                 message: 'No se puede transferir más de Q2000 por transacción'
@@ -190,18 +141,16 @@ export const createTransfer = async (req, res) => {
 
         // Obtener cuentas
         const fromAccount = await Account.findOne({ 
-            accountNumber: fromAccountNumber, 
-            isActive: true 
-        }).session(session);
+            numeroCuenta: fromAccountNumber,
+            estado: 'ACTIVA'
+        });
 
         const toAccount = await Account.findOne({ 
-            accountNumber: toAccountNumber, 
-            isActive: true 
-        }).session(session);
+            numeroCuenta: toAccountNumber,
+            estado: 'ACTIVA'
+        });
 
         if (!fromAccount) {
-            await session.abortTransaction();
-            session.endSession();
             return res.status(404).json({
                 success: false,
                 message: 'Cuenta origen no encontrada o inactiva'
@@ -209,8 +158,6 @@ export const createTransfer = async (req, res) => {
         }
 
         if (!toAccount) {
-            await session.abortTransaction();
-            session.endSession();
             return res.status(404).json({
                 success: false,
                 message: 'Cuenta destino no encontrada o inactiva'
@@ -218,71 +165,48 @@ export const createTransfer = async (req, res) => {
         }
 
         // Validar saldo suficiente
-        if (fromAccount.balance < amount) {
-            await session.abortTransaction();
-            session.endSession();
+        if (fromAccount.saldoDisponible < amount) {
             return res.status(400).json({
                 success: false,
                 message: 'Saldo insuficiente'
             });
         }
 
-        // Validar límite diario
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        if (fromAccount.lastTransferDate && fromAccount.lastTransferDate >= today) {
-            if (fromAccount.dailyTransferTotal + amount > 10000) {
-                await session.abortTransaction();
-                session.endSession();
-                return res.status(400).json({
-                    success: false,
-                    message: 'Has excedido el límite diario de transferencias (Q10,000)'
-                });
-            }
-        } else {
-            // Resetear contador diario
-            fromAccount.dailyTransferTotal = 0;
-        }
-
         // Actualizar saldos
-        fromAccount.balance -= amount;
-        fromAccount.dailyTransferTotal += amount;
-        fromAccount.lastTransferDate = new Date();
+        fromAccount.saldo -= amount;
+        fromAccount.saldoDisponible -= amount;
+        fromAccount.ultimoMovimiento = new Date();
 
-        toAccount.balance += amount;
+        toAccount.saldo += amount;
+        toAccount.saldoDisponible += amount;
+        toAccount.ultimoMovimiento = new Date();
 
-        await fromAccount.save({ session });
-        await toAccount.save({ session });
+        await fromAccount.save();
+        await toAccount.save();
 
         // Crear transacción
         const transaction = new Transaction({
             type: 'TRANSFER',
-            fromAccount: fromAccount.accountNumber,
-            toAccount: toAccount.accountNumber,
+            fromAccount: fromAccount.numeroCuenta,
+            toAccount: toAccount.numeroCuenta,
             amount,
             description,
             status: 'COMPLETED'
         });
 
-        await transaction.save({ session });
-
-        await session.commitTransaction();
-        session.endSession();
+        await transaction.save();
 
         res.status(201).json({
             success: true,
             message: 'Transferencia realizada exitosamente',
             data: {
                 transaction,
-                fromAccountBalance: fromAccount.balance,
-                toAccountBalance: toAccount.balance
+                fromAccountBalance: fromAccount.saldoDisponible,
+                toAccountBalance: toAccount.saldoDisponible
             }
         });
 
     } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
         res.status(400).json({
             success: false,
             message: 'Error al realizar la transferencia',
@@ -291,18 +215,13 @@ export const createTransfer = async (req, res) => {
     }
 };
 
-// Realizar depósito
+// Realizar depósito (SIN transacciones de MongoDB)
 export const createDeposit = async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
         const { toAccountNumber, amount, description } = req.body;
 
         // Validar monto
         if (amount <= 0) {
-            await session.abortTransaction();
-            session.endSession();
             return res.status(400).json({
                 success: false,
                 message: 'El monto debe ser mayor a 0'
@@ -311,13 +230,11 @@ export const createDeposit = async (req, res) => {
 
         // Obtener cuenta destino
         const toAccount = await Account.findOne({ 
-            accountNumber: toAccountNumber, 
-            isActive: true 
-        }).session(session);
+            numeroCuenta: toAccountNumber,
+            estado: 'ACTIVA'
+        });
 
         if (!toAccount) {
-            await session.abortTransaction();
-            session.endSession();
             return res.status(404).json({
                 success: false,
                 message: 'Cuenta destino no encontrada o inactiva'
@@ -325,39 +242,33 @@ export const createDeposit = async (req, res) => {
         }
 
         // Actualizar saldo
-        toAccount.balance += amount;
-        await toAccount.save({ session });
+        toAccount.saldo += amount;
+        toAccount.saldoDisponible += amount;
+        toAccount.ultimoMovimiento = new Date();
+        await toAccount.save();
 
         // Crear transacción
         const transaction = new Transaction({
             type: 'DEPOSIT',
-            toAccount: toAccount.accountNumber,
+            toAccount: toAccount.numeroCuenta,
             amount,
             description,
             status: 'COMPLETED'
         });
 
-        await transaction.save({ session });
-
-        await session.commitTransaction();
-        session.endSession();
-
-        // Guardar timestamp para posible reversión
-        transaction._createdAt = new Date();
+        await transaction.save();
 
         res.status(201).json({
             success: true,
             message: 'Depósito realizado exitosamente',
             data: {
                 transaction,
-                toAccountBalance: toAccount.balance,
+                toAccountBalance: toAccount.saldoDisponible,
                 revertibleUntil: new Date(Date.now() + 60000) // 1 minuto
             }
         });
 
     } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
         res.status(400).json({
             success: false,
             message: 'Error al realizar el depósito',
@@ -368,17 +279,12 @@ export const createDeposit = async (req, res) => {
 
 // Revertir depósito (solo dentro de 1 minuto)
 export const reverseDeposit = async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
         const { transactionId } = req.params;
 
-        const originalTransaction = await Transaction.findById(transactionId).session(session);
+        const originalTransaction = await Transaction.findById(transactionId);
 
         if (!originalTransaction) {
-            await session.abortTransaction();
-            session.endSession();
             return res.status(404).json({
                 success: false,
                 message: 'Transacción no encontrada'
@@ -386,8 +292,6 @@ export const reverseDeposit = async (req, res) => {
         }
 
         if (originalTransaction.type !== 'DEPOSIT') {
-            await session.abortTransaction();
-            session.endSession();
             return res.status(400).json({
                 success: false,
                 message: 'Solo se pueden revertir depósitos'
@@ -395,8 +299,6 @@ export const reverseDeposit = async (req, res) => {
         }
 
         if (originalTransaction.status === 'REVERSED') {
-            await session.abortTransaction();
-            session.endSession();
             return res.status(400).json({
                 success: false,
                 message: 'Este depósito ya fue revertido'
@@ -406,8 +308,6 @@ export const reverseDeposit = async (req, res) => {
         // Verificar tiempo (1 minuto)
         const timeDiff = Date.now() - originalTransaction.createdAt.getTime();
         if (timeDiff > 60000) {
-            await session.abortTransaction();
-            session.endSession();
             return res.status(400).json({
                 success: false,
                 message: 'Ya no es posible revertir este depósito (máximo 1 minuto)'
@@ -416,12 +316,10 @@ export const reverseDeposit = async (req, res) => {
 
         // Obtener cuenta
         const account = await Account.findOne({ 
-            accountNumber: originalTransaction.toAccount 
-        }).session(session);
+            numeroCuenta: originalTransaction.toAccount 
+        });
 
         if (!account) {
-            await session.abortTransaction();
-            session.endSession();
             return res.status(404).json({
                 success: false,
                 message: 'Cuenta no encontrada'
@@ -429,9 +327,7 @@ export const reverseDeposit = async (req, res) => {
         }
 
         // Validar saldo suficiente para revertir
-        if (account.balance < originalTransaction.amount) {
-            await session.abortTransaction();
-            session.endSession();
+        if (account.saldoDisponible < originalTransaction.amount) {
             return res.status(400).json({
                 success: false,
                 message: 'Saldo insuficiente para revertir el depósito'
@@ -439,12 +335,14 @@ export const reverseDeposit = async (req, res) => {
         }
 
         // Revertir saldo
-        account.balance -= originalTransaction.amount;
-        await account.save({ session });
+        account.saldo -= originalTransaction.amount;
+        account.saldoDisponible -= originalTransaction.amount;
+        account.ultimoMovimiento = new Date();
+        await account.save();
 
         // Marcar transacción original como revertida
         originalTransaction.status = 'REVERSED';
-        await originalTransaction.save({ session });
+        await originalTransaction.save();
 
         // Crear transacción de reversión
         const reversalTransaction = new Transaction({
@@ -456,23 +354,18 @@ export const reverseDeposit = async (req, res) => {
             originalTransactionId: originalTransaction._id
         });
 
-        await reversalTransaction.save({ session });
-
-        await session.commitTransaction();
-        session.endSession();
+        await reversalTransaction.save();
 
         res.status(200).json({
             success: true,
             message: 'Depósito revertido exitosamente',
             data: {
                 reversalTransaction,
-                accountBalance: account.balance
+                accountBalance: account.saldoDisponible
             }
         });
 
     } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
         res.status(400).json({
             success: false,
             message: 'Error al revertir el depósito',
@@ -498,40 +391,6 @@ export const getAccountsWithMostTransactions = async (req, res) => {
                     _id: '$fromAccount',
                     transactionCount: { $sum: 1 },
                     totalAmount: { $sum: '$amount' }
-                }
-            },
-            {
-                $lookup: {
-                    from: 'accounts',
-                    localField: '_id',
-                    foreignField: 'accountNumber',
-                    as: 'accountInfo'
-                }
-            },
-            {
-                $unwind: '$accountInfo'
-            },
-            {
-                $lookup: {
-                    from: 'users',
-                    localField: 'accountInfo.userId',
-                    foreignField: '_id',
-                    as: 'userInfo'
-                }
-            },
-            {
-                $unwind: '$userInfo'
-            },
-            {
-                $project: {
-                    _id: 0,
-                    accountNumber: '$_id',
-                    accountType: '$accountInfo.accountType',
-                    balance: '$accountInfo.balance',
-                    userName: '$userInfo.name',
-                    userUsername: '$userInfo.username',
-                    transactionCount: 1,
-                    totalAmount: 1
                 }
             },
             {
