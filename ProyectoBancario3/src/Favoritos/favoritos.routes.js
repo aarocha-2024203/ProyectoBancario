@@ -1,6 +1,7 @@
 'use strict';
 
 import { Router } from 'express';
+import { validateJWT } from '../../middlewares/validate-JWT.js';
 import {
     getFavoritos,
     getFavoritoById,
@@ -11,6 +12,9 @@ import {
 } from './favoritos.controller.js';
 
 const router = Router();
+
+// TODAS las rutas requieren autenticación
+router.use(validateJWT);
 
 // Listar favoritos del usuario
 router.get('/', getFavoritos);
