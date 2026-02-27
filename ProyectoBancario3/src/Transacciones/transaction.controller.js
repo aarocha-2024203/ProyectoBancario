@@ -282,7 +282,7 @@ export const reverseDeposit = async (req, res) => {
     try {
         const { transactionId } = req.params;
 
-        const originalTransaction = await Transaction.findById(transactionId);
+        const originalTransaction = await Transaction.findOne({ transactionId });
 
         if (!originalTransaction) {
             return res.status(404).json({
@@ -374,45 +374,3 @@ export const reverseDeposit = async (req, res) => {
     }
 };
 
-// Obtener cuentas con más movimientos
-export const getAccountsWithMostTransactions = async (req, res) => {
-    try {
-        const { order = 'desc', limit = 10 } = req.query;
-
-        const pipeline = [
-            {
-                $match: {
-                    status: { $ne: 'REVERSED' },
-                    type: { $in: ['TRANSFER', 'PURCHASE', 'PAYMENT'] }
-                }
-            },
-            {
-                $group: {
-                    _id: '$fromAccount',
-                    transactionCount: { $sum: 1 },
-                    totalAmount: { $sum: '$amount' }
-                }
-            },
-            {
-                $sort: { transactionCount: order === 'desc' ? -1 : 1 }
-            },
-            {
-                $limit: parseInt(limit)
-            }
-        ];
-
-        const results = await Transaction.aggregate(pipeline);
-
-        res.status(200).json({
-            success: true,
-            data: results
-        });
-
-    } catch (error) {
-        res.status(400).json({
-            success: false,
-            message: 'Error al obtener cuentas con más movimientos',
-            error: error.message
-        });
-    }
-};
