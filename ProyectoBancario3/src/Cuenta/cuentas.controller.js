@@ -1,6 +1,7 @@
 'use strict';
 
 import Cuenta from './cuentas.model.js';
+import User from '../Clientes/clientes.model.js'; // 👈 ajusta la ruta según tu proyecto
 
 // Listar cuentas (con paginación y filtros básicos)
 export const getCuentas = async (req, res) => {
@@ -25,6 +26,20 @@ export const getCuentas = async (req, res) => {
             .sort(options.sort);
 
         const total = await Cuenta.countDocuments(filter);
+
+        if (total === 0) {
+            return res.status(200).json({
+                success: true,
+                message: 'No hay cuentas registradas',
+                data: [],
+                pagination: {
+                    currentPage: 1,
+                    totalPages: 0,
+                    totalItems: 0,
+                    limit: parseInt(limit)
+                }
+            });
+        }
 
         res.status(200).json({
             success: true,
@@ -80,7 +95,6 @@ export const createCuenta = async (req, res) => {
     try {
         const cuentaData = req.body;
         
-        // Validaciones básicas adicionales
         if (!cuentaData.cliente) {
             return res.status(400).json({
                 success: false,
@@ -95,13 +109,20 @@ export const createCuenta = async (req, res) => {
             });
         }
 
+        // Verificar que el cliente existe y está activo
+        const clienteExiste = await User.findOne({ _id: cuentaData.cliente, isActive: true });
+        if (!clienteExiste) {
+            return res.status(404).json({
+                success: false,
+                message: 'El cliente no existe o está inactivo'
+            });
+        }
+
         // Por defecto
         cuentaData.estado = 'ACTIVA';
         cuentaData.saldoDisponible = cuentaData.saldo || 0;
 
-        // Aquí podrías generar número de cuenta automático si no viene
         if (!cuentaData.numeroCuenta) {
-            // Ejemplo muy básico – en producción usa algo más robusto
             const ultimo = await Cuenta.countDocuments() + 100000;
             cuentaData.numeroCuenta = `GTB${ultimo.toString().padStart(8, '0')}`;
         }
@@ -139,18 +160,29 @@ export const updateCuenta = async (req, res) => {
             if (updateData[campo] !== undefined) delete updateData[campo];
         });
 
-        const cuenta = await Cuenta.findByIdAndUpdate(
-            id,
-            updateData,
-            { new: true, runValidators: true }
-        ).populate('cliente', 'name dpi email');
-
-        if (!cuenta) {
+        // Verificar que la cuenta existe
+        const cuentaExiste = await Cuenta.findById(id);
+        if (!cuentaExiste) {
             return res.status(404).json({
                 success: false,
                 message: 'Cuenta no encontrada'
             });
         }
+
+        // Verificar que el cliente asociado a la cuenta existe y está activo
+        const clienteExiste = await User.findOne({ _id: cuentaExiste.cliente, isActive: true });
+        if (!clienteExiste) {
+            return res.status(404).json({
+                success: false,
+                message: 'El cliente asociado a esta cuenta no existe o está inactivo'
+            });
+        }
+
+        const cuenta = await Cuenta.findByIdAndUpdate(
+            id,
+            updateData,
+            { new: true, runValidators: true }
+        ).populate('cliente', 'name dpi email');
 
         res.status(200).json({
             success: true,
@@ -166,7 +198,6 @@ export const updateCuenta = async (req, res) => {
         });
     }
 };
-
 // Eliminar cuenta (soft delete → cambiar estado)
 export const deleteCuenta = async (req, res) => {
     try {
