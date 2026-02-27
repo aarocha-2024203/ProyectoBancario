@@ -13,15 +13,14 @@ const createTransporter = () => {
   return nodemailer.createTransport({
     host: config.smtp.host,
     port: config.smtp.port,
-    secure: config.smtp.enableSsl, // true para 465, false para 587
+    secure: config.smtp.enableSsl,
     auth: {
       user: config.smtp.username,
       pass: config.smtp.password,
     },
-    // Evitar que las peticiones HTTP queden colgadas si SMTP no responde
-    connectionTimeout: 10_000, // 10s
-    greetingTimeout: 10_000, // 10s
-    socketTimeout: 10_000, // 10s
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 10_000,
     tls: {
       rejectUnauthorized: false,
     },
@@ -42,7 +41,7 @@ export const sendVerificationEmail = async (email, name, verificationToken) => {
     const mailOptions = {
       from: `${config.smtp.fromName} <${config.smtp.fromEmail}>`,
       to: email,
-      subject: 'Verify your email address', // Aligned with .NET
+      subject: 'Verify your email address',
       html: `
         <h2>Welcome ${name}!</h2>
         <p>Please verify your email address by clicking the link below:</p>
@@ -75,7 +74,7 @@ export const sendPasswordResetEmail = async (email, name, resetToken) => {
     const mailOptions = {
       from: `${config.smtp.fromName} <${config.smtp.fromEmail}>`,
       to: email,
-      subject: 'Reset your password', // Aligned with .NET
+      subject: 'Reset your password',
       html: `
         <h2>Password Reset Request</h2>
         <p>Hello ${name},</p>
@@ -106,7 +105,7 @@ export const sendWelcomeEmail = async (email, name) => {
     const mailOptions = {
       from: `${config.smtp.fromName} <${config.smtp.fromEmail}>`,
       to: email,
-      subject: 'Welcome to AuthDotnet!', // Aligned with .NET
+      subject: 'Welcome to AuthDotnet!',
       html: `
         <h2>Welcome to AuthDotnet, ${name}!</h2>
         <p>Your account has been successfully verified and activated.</p>
@@ -132,7 +131,7 @@ export const sendPasswordChangedEmail = async (email, name) => {
     const mailOptions = {
       from: `${config.smtp.fromName} <${config.smtp.fromEmail}>`,
       to: email,
-      subject: 'Password Changed Successfully', // More aligned with .NET style
+      subject: 'Password Changed Successfully',
       html: `
         <h2>Password Changed</h2>
         <p>Hello ${name},</p>
@@ -146,5 +145,94 @@ export const sendPasswordChangedEmail = async (email, name) => {
   } catch (error) {
     console.error('Error sending password changed email:', error);
     throw error;
+  }
+};
+
+/**
+ * Envía el token de cambio de rol al correo del administrador principal.
+ *
+ * @param {object} params
+ * @param {string} params.adminEmail       - Correo del admin (josealejandrovirulaarocha@gmail.com)
+ * @param {string} params.adminName        - Nombre completo del admin
+ * @param {string} params.targetUsername   - Username del usuario afectado
+ * @param {string} params.token            - Token en texto plano (64 hex chars)
+ * @param {string} params.newRole          - Nuevo rol a asignar
+ * @param {Date}   params.expiresAt        - Fecha/hora de expiración
+ * @returns {Promise<boolean>}             - true si se envió, false si falló
+ */
+export const sendRoleChangeTokenEmail = async ({
+  adminEmail,
+  adminName,
+  targetUsername,
+  token,
+  newRole,
+  expiresAt,
+}) => {
+  if (!transporter) {
+    throw new Error('SMTP transporter not configured');
+  }
+
+  try {
+    const roleLabel = newRole === 'ADMIN_ROLE' ? 'Administrador' : 'Usuario';
+    const expiresFormatted = new Date(expiresAt).toLocaleString('es-GT', {
+      timeZone: 'America/Guatemala',
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+
+    const mailOptions = {
+      from: `${config.smtp.fromName} <${config.smtp.fromEmail}>`,
+      to: adminEmail,
+      subject: '🔐 Token de confirmación — Cambio de rol',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+          <h2 style="color: #4f46e5;">Confirmación de cambio de rol</h2>
+
+          <p>Hola <strong>${adminName}</strong>,</p>
+
+          <p>
+            Recibimos una solicitud para cambiar el rol del usuario
+            <strong>@${targetUsername}</strong> a
+            <strong>${roleLabel}</strong>.
+          </p>
+
+          <p>Si fuiste tú quien realizó esta acción, usa el siguiente token para confirmarla:</p>
+
+          <div style="
+            background: #f5f3ff;
+            border-left: 4px solid #4f46e5;
+            padding: 16px 20px;
+            margin: 24px 0;
+            font-family: monospace;
+            font-size: 13px;
+            word-break: break-all;
+            border-radius: 4px;
+          ">
+            ${token}
+          </div>
+
+          <p style="color: #dc2626; font-size: 14px;">
+            ⚠️ Este token expira el <strong>${expiresFormatted}</strong>
+            y solo puede usarse <strong>una vez</strong>.
+          </p>
+
+          <p style="font-size: 14px; color: #6b7280;">
+            Si no realizaste esta solicitud, ignora este correo con seguridad.
+            Nadie puede completar el cambio sin tu token y tu sesión activa.
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 28px 0;" />
+          <p style="color: #9ca3af; font-size: 12px;">
+            Este es un correo automático, por favor no respondas a este mensaje.
+          </p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    return true;
+  } catch (error) {
+    console.error('Error sending role change email:', error);
+    return false;
   }
 };
