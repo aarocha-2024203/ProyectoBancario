@@ -13,6 +13,8 @@ import {
   validateResendVerification,
   validateForgotPassword,
   validateResetPassword,
+  validateRequestRoleChange,
+  validateVerifyRoleChange,
 } from '../../middlewares/validation.js';
 
 const router = Router();
@@ -138,7 +140,7 @@ router.post('/login', authRateLimit, validateLogin, authController.login);
  */
 router.post(
   '/verify-email',
-  requestLimit, // Match .NET ApiPolicy (20 tokens per minute)
+  requestLimit,
   validateVerifyEmail,
   authController.verifyEmail
 );
@@ -170,7 +172,7 @@ router.post(
  */
 router.post(
   '/resend-verification',
-  authRateLimit, // Match .NET AuthPolicy (5 req/min)
+  authRateLimit,
   validateResendVerification,
   authController.resendVerification
 );
@@ -200,7 +202,7 @@ router.post(
  */
 router.post(
   '/forgot-password',
-  authRateLimit, // Match .NET AuthPolicy (5 req/min)
+  authRateLimit,
   validateForgotPassword,
   authController.forgotPassword
 );
@@ -288,5 +290,94 @@ router.get('/profile', validateJWT, authController.getProfile);
  *         description: Usuario no encontrado
  */
 router.post('/profile/by-id', requestLimit, authController.getProfileById);
+
+/**
+ * @swagger
+ * /api/v1/auth/request-role-change:
+ *   post:
+ *     tags: [Roles]
+ *     summary: Solicita cambio de rol de un usuario
+ *     description: >
+ *       El admin autenticado solicita cambiar el rol de otro usuario.
+ *       Se genera un token de un solo uso (15 min) y se envía al correo del admin principal.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - targetUserId
+ *               - newRole
+ *             properties:
+ *               targetUserId:
+ *                 type: string
+ *                 description: ID del usuario al que se le cambiará el rol
+ *                 example: "abc123xyz456def7"
+ *               newRole:
+ *                 type: string
+ *                 enum: [ADMIN_ROLE, USER_ROLE]
+ *                 example: "ADMIN_ROLE"
+ *     responses:
+ *       200:
+ *         description: Token enviado al correo del administrador
+ *       400:
+ *         description: Datos inválidos o usuario ya tiene ese rol
+ *       401:
+ *         description: Token JWT inválido o expirado
+ *       403:
+ *         description: Sin permisos de administrador
+ *       404:
+ *         description: Usuario no encontrado
+ */
+router.post(
+  '/request-role-change',
+  validateJWT,
+  authRateLimit,
+  validateRequestRoleChange,
+  authController.requestRoleChange
+);
+
+/**
+ * @swagger
+ * /api/v1/auth/verify-role-change:
+ *   post:
+ *     tags: [Roles]
+ *     summary: Verifica el token y ejecuta el cambio de rol
+ *     description: >
+ *       El admin ingresa el token recibido por email para confirmar el cambio de rol.
+ *       El token es de un solo uso y expira en 15 minutos.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: Token de 64 caracteres recibido por email
+ *                 example: "a3f8c2d1e9b47f6304a1d2e8c9b0f1a2e3d4c5b6a7f8e9d0c1b2a3f4e5d6c7b8"
+ *     responses:
+ *       200:
+ *         description: Rol actualizado exitosamente
+ *       400:
+ *         description: Token mal formado
+ *       401:
+ *         description: Token inválido o expirado
+ */
+router.post(
+  '/verify-role-change',
+  validateJWT,
+  authRateLimit,
+  validateVerifyRoleChange,
+  authController.verifyRoleChange
+);
 
 export default router;
