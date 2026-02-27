@@ -6,6 +6,28 @@ import Product from './producto.model.js';
 export const createProduct = async (req, res) => {
     try {
         const data = req.body;
+
+        // Verificar si ya existe un producto inactivo con el mismo nombre
+        const existingProduct = await Product.findOne({
+            name: data.name,
+            isActive: false
+        });
+
+        if (existingProduct) {
+            // Reactivar el producto existente con los nuevos datos
+            Object.assign(existingProduct, data);
+            existingProduct.isActive = true;
+
+            const savedProduct = await existingProduct.save();
+
+            return res.status(200).json({
+                success: true,
+                message: 'Producto reactivado exitosamente',
+                product: savedProduct
+            });
+        }
+
+        // Si no existe, crear uno nuevo
         const product = new Product(data);
         await product.save();
 
