@@ -1,4 +1,5 @@
 import { body, validationResult } from 'express-validator';
+import { ALLOWED_ROLES } from '../helpers/role-constants.js';
 
 /**
  * Middleware para procesar resultados de validación
@@ -138,6 +139,45 @@ export const validateResetPassword = [
   handleValidationErrors,
 ];
 
+/**
+ * Validaciones para solicitar cambio de rol
+ * POST /api/v1/auth/request-role-change
+ */
+export const validateRequestRoleChange = [
+  body('targetUserId')
+    .trim()
+    .notEmpty()
+    .withMessage('El targetUserId es obligatorio.')
+    .isString()
+    .withMessage('targetUserId debe ser un string.'),
+
+  body('newRole')
+    .trim()
+    .notEmpty()
+    .withMessage('El newRole es obligatorio.')
+    .isIn(ALLOWED_ROLES)
+    .withMessage(`newRole debe ser uno de: ${ALLOWED_ROLES.join(', ')}.`),
+
+  handleValidationErrors,
+];
+
+/**
+ * Validaciones para verificar token de cambio de rol
+ * POST /api/v1/auth/verify-role-change
+ */
+export const validateVerifyRoleChange = [
+  body('token')
+    .trim()
+    .notEmpty()
+    .withMessage('El token es obligatorio.')
+    .isString()
+    .withMessage('El token debe ser un string.')
+    .isLength({ min: 64, max: 64 })
+    .withMessage('Formato de token inválido.'),
+
+  handleValidationErrors,
+];
+
 export const isAdmin = async (req, res, next) => {
   try {
     if (!req.user) {
@@ -147,11 +187,9 @@ export const isAdmin = async (req, res, next) => {
       });
     }
 
-    // Importar modelos necesarios
     const { UserRole } = await import('../src/auth/role.model.js');
     const { Role } = await import('../src/auth/role.model.js');
 
-    // Buscar el rol del usuario desde la tabla user_roles
     const userRole = await UserRole.findOne({
       where: { UserId: req.user.Id },
       include: [{ model: Role, as: 'Role' }]
