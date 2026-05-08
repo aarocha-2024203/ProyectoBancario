@@ -1,16 +1,23 @@
 import Card from './cards.model.js';
-import { User } from '../../../Auth-Service/src/users/user.model.js';
 import { getUniqueCardNumber } from '../../helpers/card.helper.js';
 
-// agregar
+const getUserById = async (userId) => {
+    const response = await fetch(`http://auth-service:3005/api/v1/auth/profile-by-id`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.success ? data.data : null;
+};
+
 export const createCard = async (req, res) => {
     try {
         const cardData = req.body;
         cardData.userId = String(cardData.userId || '').trim();
 
-        const user = await User.findOne({
-            where: { Id: cardData.userId }
-        });
+        const user = await getUserById(cardData.userId);
 
         if (!user) {
             return res.status(404).json({
@@ -76,12 +83,11 @@ export const updateCard = async (req, res) => {
         const { id } = req.params;
         const cardData = { ...req.body };
 
-        // Evitar que cambien el numero autogenerado por update
         delete cardData.cardNumber;
 
         if (cardData.userId) {
             cardData.userId = String(cardData.userId).trim();
-            const user = await User.findOne({ where: { Id: cardData.userId } });
+            const user = await getUserById(cardData.userId);
 
             if (!user) {
                 return res.status(404).json({
@@ -117,7 +123,6 @@ export const updateCard = async (req, res) => {
         });
     }
 };
-
 
 export const deleteCard = async (req, res) => {
     try {
@@ -183,6 +188,7 @@ export const getCardById = async (req, res) => {
         });
     }
 };
+
 export const changeCardStatus = async (req, res) => {
     try {
         const { id } = req.params;

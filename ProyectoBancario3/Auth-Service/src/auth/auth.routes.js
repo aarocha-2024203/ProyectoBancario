@@ -260,4 +260,32 @@ router.post(
  */
 router.get('/profile', validateJWT, authController.getProfile);
 
+/**
+ * @swagger
+ * /auth/profile-by-id:
+ *   post:
+ *     summary: Obtener perfil de usuario por ID (uso interno entre microservicios)
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 example: uuid-del-usuario
+ *     responses:
+ *       200:
+ *         description: Perfil del usuario
+ *       400:
+ *         description: userId requerido
+ *       404:
+ *         description: Usuario no encontrado
+ */
+router.post('/profile-by-id', authController.getProfileById);
+
 export default router;

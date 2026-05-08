@@ -5,8 +5,18 @@ import {
     validateUniqueAccountNumber,
     validateAccountHolderData
 } from '../../helpers/account.helper.js';
-import { User } from '../../../Auth-Service/src/users/user.model.js';
 import Currency from '../coins/coins.model.js';
+
+const getUserById = async (userId) => {
+    const response = await fetch(`http://auth-service:3005/api/v1/auth/profile-by-id`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.success ? data.data : null;
+};
 
 const normalizeCurrencyCode = (accountData) => (
     accountData.currencyCode || accountData.currency || accountData.currencyId || ''
@@ -18,23 +28,18 @@ const resolveRequesterUserId = (req) => (
 
 const validateExistingCurrencyCode = async (currencyCode) => {
     const currency = await Currency.findOne({ code: currencyCode, status: 'activa' });
-
     if (!currency) {
         throw new Error(`La moneda ${currencyCode} no existe o esta inactiva`);
     }
 };
 
-//agregar
 export const createAccount = async (req, res) => {
     try {
-
         const accountData = req.body;
         accountData.currencyCode = normalizeCurrencyCode(accountData);
         await validateExistingCurrencyCode(accountData.currencyCode);
 
-        const user = await User.findOne({
-            where: { Id: accountData.userId }
-        });
+        const user = await getUserById(accountData.userId);
 
         if (!user) {
             return res.status(404).json({
@@ -43,9 +48,8 @@ export const createAccount = async (req, res) => {
             });
         }
 
-        // El nombre y username se obtienen del usuario autenticado/registrado
-        accountData.name = user.Name;
-        accountData.username = user.Username;
+        accountData.name = user.name || user.Name;
+        accountData.username = user.username || user.Username;
 
         validateAccountHolderData(accountData);
         validateMinimumIncome(accountData.monthlyIncome);
@@ -62,7 +66,6 @@ export const createAccount = async (req, res) => {
                 if (error.message !== 'El numero de cuenta ya existe') {
                     throw error;
                 }
-
                 retries += 1;
                 accountData.accountNumber = generateAccountNumber();
             }
@@ -97,7 +100,7 @@ export const getAccounts = async (req, res) => {
             page: parseInt(page),
             limit: parseInt(limit),
             sort: { createdAt: -1 }
-        }
+        };
 
         const accounts = await Account.find(filter)
             .limit(limit * 1)
@@ -114,23 +117,21 @@ export const getAccounts = async (req, res) => {
                 totalRecords: total,
                 limit
             }
-        })
+        });
     } catch (error) {
         res.status(500).json({
             success: false,
             message: 'Error al obtener las cuentas',
             error: error.message
-        })
+        });
     }
+};
 
-}
 export const updateAccount = async (req, res) => {
     try {
         const { accountNumber } = req.params;
         const accountData = req.body;
         const requesterRole = req.user?.role;
-
-            // resolve the user id from the JWT so we can enforce ownership later
         const requesterUserId = resolveRequesterUserId(req);
 
         if (requesterRole === 'USER_ROLE') {
@@ -152,18 +153,13 @@ export const updateAccount = async (req, res) => {
             await validateExistingCurrencyCode(accountData.currencyCode);
         }
 
-        // username no se actualiza desde cliente
         delete accountData.username;
-
         validateAccountHolderData(accountData, { partial: true });
 
         if (accountData.monthlyIncome !== undefined) {
             validateMinimumIncome(accountData.monthlyIncome);
         }
 
-        // before performing the update we need to ensure that a normal user
-        // can only modify their own account.  Admins/managers/atm roles are
-        // allowed to update any record as before.
         const account = await Account.findOne({ accountNumber });
 
         if (!account) {
@@ -180,16 +176,12 @@ export const updateAccount = async (req, res) => {
             });
         }
 
-        // perform the update after ownership check
         const updated = await Account.findOneAndUpdate(
             { accountNumber },
             accountData,
             { new: true, runValidators: true }
         );
 
-        // `updated` is guaranteed to exist because we already fetched `account`
-        // above and returned early if it didn't.  Still, keep the response
-        // structure consistent.
         if (!updated) {
             return res.status(404).json({
                 success: false,
@@ -275,13 +267,11 @@ export const getAccountByAccountNumber = async (req, res) => {
     }
 };
 
-
 export const changeAccountStatus = async (req, res) => {
     try {
         const { accountNumber } = req.params;
         const { status } = req.body;
 
-        // Validar estados permitidos
         const allowedStatus = ['activa', 'inactiva', 'bloqueada'];
 
         if (!allowedStatus.includes(status)) {
