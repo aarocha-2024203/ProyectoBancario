@@ -35,3 +35,11 @@ export const resetPassword = (token, newPassword) =>
 // GET /auth/profile
 export const getProfile = () =>
   api.get('/auth/profile');
+
+// PUT /users/:id — actualizar datos básicos del perfil
+export const updateProfile = (id, data) =>
+  api.put(`/users/${id}`, data);
+
+// GET /users/ — listar todos los usuarios (admin)
+export const getAllUsers = () =>
+  api.get('/users/');
