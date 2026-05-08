@@ -10,6 +10,7 @@ import {
   getProfile,
 } from '../../../shared/api/auth';
 import { getErrorMessage } from '../../../shared/utils/toast';
+import { clearDataCache } from '../../../shared/hooks/useData';
 
 const useAuthStore = create(
   persist(
@@ -119,9 +120,10 @@ const useAuthStore = create(
       },
 
       // ── Logout ───────────────────────────────────────────────
-      logout: () => {
-        set({ user: null, token: null, isAuthenticated: false, error: null });
-      },
+     logout: () => {
+  clearDataCache();
+  set({ user: null, token: null, isAuthenticated: false, error: null });
+},
 
       clearError: () => set({ error: null }),
     }),
