@@ -3,33 +3,38 @@ import api from './api';
 const delay = (ms) => new Promise(r => setTimeout(r, ms));
 
 export const getUsers = async () => {
-  const roles = ['USER_ROLE', 'ADMIN_ROLE'];
-  const all = [];
-  const seen = new Set();
+  const roles = ['ADMIN_ROLE', 'USER_ROLE']; // ADMIN primero para que tome precedencia
+  const all   = [];
+  const seen  = new Set();
 
   for (let i = 0; i < roles.length; i++) {
     try {
-      if (i > 0) await delay(400);
-      const res = await api.get(`/users/by-role/${roles[i]}`);
-      const d = res.data;
-      const items = d?.data ?? d?.users ?? d?.items ?? (Array.isArray(d) ? d : []);
+      if (i > 0) await delay(2000);
+      const res   = await api.get(`/users/by-role/${roles[i]}`);
+      const d     = res.data;
+      const items = Array.isArray(d) ? d
+                  : Array.isArray(d?.data) ? d.data
+                  : [];
       items.forEach(u => {
-        const id = u.Id || u.id || u._id;
+        const id = String(u.id || u.Id || '');
         if (id && !seen.has(id)) {
           seen.add(id);
-          all.push({ ...u, _roleName: roles[i] });
+          // El campo 'role' que devuelve el backend ya tiene el rol correcto
+          all.push({ ...u, _fetchedRole: roles[i] });
         }
       });
     } catch (e) {
-      if (e?.response?.status !== 403) console.warn(`Error fetching ${roles[i]}:`, e?.message);
+      console.warn(`[getUsers] ${roles[i]}: ${e?.response?.status}`);
     }
   }
 
-  return { data: { data: all } };
+  return { data: all };
 };
 
-export const changeRole = (id, roleName) =>
-  api.put(`/users/change-role/${id}`, { roleName });
+export const changeRole = async (id, roleName) => {
+  const res = await api.put(`/users/change-role/${id}`, { roleName });
+  return res;
+};
 
 export const getUserRoles = (id) =>
   api.get(`/users/${id}/roles`);
