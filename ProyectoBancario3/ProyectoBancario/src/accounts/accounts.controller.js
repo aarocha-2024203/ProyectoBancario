@@ -8,14 +8,26 @@ import {
 import Currency from '../coins/coins.model.js';
 
 const getUserById = async (userId) => {
-    const response = await fetch(`http://auth-service:3005/api/v1/auth/profile-by-id`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId })
-    });
-    if (!response.ok) return null;
-    const data = await response.json();
-    return data.success ? data.data : null;
+    try {
+        console.log('Llamando a auth-service para usuario:', userId);
+        const response = await fetch(`http://localhost:3005/api/v1/auth/profile-by-id`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId })
+        });
+        console.log('Respuesta auth-service status:', response.status);
+        if (!response.ok) {
+            const text = await response.text();
+            console.log('Respuesta auth-service body:', text);
+            return null;
+        }
+        const data = await response.json();
+        console.log('Usuario encontrado:', JSON.stringify(data));
+        return data.success ? data.data : null;
+    } catch (err) {
+        console.error('ERROR en getUserById:', err.message);
+        return null;
+    }
 };
 
 const normalizeCurrencyCode = (accountData) => (
@@ -35,11 +47,19 @@ const validateExistingCurrencyCode = async (currencyCode) => {
 
 export const createAccount = async (req, res) => {
     try {
+        console.log('=== CREATE ACCOUNT ===');
+        console.log('Body:', JSON.stringify(req.body, null, 2));
+
         const accountData = req.body;
         accountData.currencyCode = normalizeCurrencyCode(accountData);
-        await validateExistingCurrencyCode(accountData.currencyCode);
+        console.log('Currency:', accountData.currencyCode);
 
+        await validateExistingCurrencyCode(accountData.currencyCode);
+        console.log('Moneda OK');
+
+        console.log('Buscando usuario:', accountData.userId);
         const user = await getUserById(accountData.userId);
+        console.log('Usuario:', JSON.stringify(user));
 
         if (!user) {
             return res.status(404).json({
@@ -50,6 +70,7 @@ export const createAccount = async (req, res) => {
 
         accountData.name = user.name || user.Name;
         accountData.username = user.username || user.Username;
+        console.log('Name:', accountData.name, 'Username:', accountData.username);
 
         validateAccountHolderData(accountData);
         validateMinimumIncome(accountData.monthlyIncome);
@@ -63,20 +84,17 @@ export const createAccount = async (req, res) => {
                 await validateUniqueAccountNumber(accountData.accountNumber);
                 break;
             } catch (error) {
-                if (error.message !== 'El numero de cuenta ya existe') {
-                    throw error;
-                }
+                if (error.message !== 'El numero de cuenta ya existe') throw error;
                 retries += 1;
                 accountData.accountNumber = generateAccountNumber();
             }
         }
 
-        if (retries === maxRetries) {
-            throw new Error('No se pudo generar un numero de cuenta unico');
-        }
+        if (retries === maxRetries) throw new Error('No se pudo generar un numero de cuenta unico');
 
         const account = new Account(accountData);
         await account.save();
+        console.log('Cuenta creada:', account.accountNumber);
 
         res.status(201).json({
             success: true,
@@ -85,6 +103,7 @@ export const createAccount = async (req, res) => {
         });
 
     } catch (error) {
+        console.error('ERROR createAccount:', error.message);
         res.status(400).json({
             success: false,
             message: error.message
