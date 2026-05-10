@@ -10,20 +10,31 @@ import Currency from '../coins/coins.model.js';
 const getUserById = async (userId) => {
     try {
         console.log('Llamando a auth-service para usuario:', userId);
-        const response = await fetch(`http://localhost:3005/api/v1/auth/profile-by-id`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId })
-        });
+
+        const response = await fetch(
+            `${process.env.AUTH_SERVICE_URL}/api/v1/auth/profile-by-id`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userId })
+            }
+        );
+
         console.log('Respuesta auth-service status:', response.status);
+
         if (!response.ok) {
             const text = await response.text();
             console.log('Respuesta auth-service body:', text);
             return null;
         }
+
         const data = await response.json();
         console.log('Usuario encontrado:', JSON.stringify(data));
+
         return data.success ? data.data : null;
+
     } catch (err) {
         console.error('ERROR en getUserById:', err.message);
         return null;
@@ -323,6 +334,35 @@ export const changeAccountStatus = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error al cambiar estado',
+            error: error.message
+        });
+    }
+};
+
+export const getAccountsByUserId = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const requesterRole   = req.user?.role;
+        const requesterUserId = req.user?.sub || req.user?.userId || req.userId || '';
+
+        if (requesterRole === 'USER_ROLE' && userId !== requesterUserId) {
+            return res.status(403).json({
+                success: false,
+                message: 'No puedes ver las cuentas de otro usuario'
+            });
+        }
+
+        const accounts = await Account.find({ userId }).sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            data: accounts
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener las cuentas del usuario',
             error: error.message
         });
     }
