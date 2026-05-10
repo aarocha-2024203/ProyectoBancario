@@ -20,6 +20,7 @@ import accountLockRoutes from '../src/accountLock/accountLock.routes.js';
 import withdrawalRoutes from '../src/withdrawal/withdrawal.routes.js';
 import benefitsRoutes from '../src/benefits/benefits.routes.js';
 import depositsRoutes from '../src/deposits/deposits.routes.js';
+import { startUnlockScheduler } from '../helpers/unlock-scheduler.js';
 
 const BASE_PATH = '/api/v1';
 
@@ -68,14 +69,15 @@ export const initServer = async () => {
     try {
         await dbConnection();
         await seedCommonCurrencies();
+        startUnlockScheduler(); // ← agrega aquí
         middlewares(app);
-        setupSwagger(app); // ← NUEVO
+        setupSwagger(app);
         routes(app);
 
         app.listen(PORT, () => {
             console.log(`Sistema Bancario Admin Server running on port ${PORT}`);
             console.log(`Health check: http://localhost:${PORT}${BASE_PATH}/health`);
-            console.log(`Swagger docs:  http://localhost:${PORT}${BASE_PATH}/docs`); // ← NUEVO
+            console.log(`Swagger docs:  http://localhost:${PORT}${BASE_PATH}/docs`);
         });
     } catch (error) {
         console.error(`Error starting Admin Server: ${error.message}`);
