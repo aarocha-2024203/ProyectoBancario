@@ -1,6 +1,19 @@
 import { Router } from "express";
-import { createAccount, getAccounts, updateAccount, deleteAccount, changeAccountStatus, getAccountByAccountNumber } from "./accounts.controller.js";
-import { validateCreateAccount, validateUpdateAccount, validateAccountById, validateReadAccountById } from "../../middlewares/accounts-validators.js";
+import {
+    createAccount,
+    getAccounts,
+    updateAccount,
+    deleteAccount,
+    changeAccountStatus,
+    getAccountByAccountNumber,
+    getAccountsByUserId
+} from "./accounts.controller.js";
+import {
+    validateCreateAccount,
+    validateUpdateAccount,
+    validateAccountById,
+    validateReadAccountById
+} from "../../middlewares/accounts-validators.js";
 import { validateJWT } from "../../middlewares/validate-JWT.js";
 import { requireRole } from "../../middlewares/validate-role.js";
 
@@ -91,6 +104,29 @@ router.post('/create', validateJWT, validateCreateAccount, createAccount);
  *         description: Acceso denegado, se requiere ADMIN_ROLE o MANAGER_ROLE
  */
 router.get('/', validateJWT, requireRole('ADMIN_ROLE', 'MANAGER_ROLE'), getAccounts);
+
+/**
+ * @swagger
+ * /accounts/user/{userId}:
+ *   get:
+ *     summary: Obtener cuentas de un usuario específico
+ *     tags: [Accounts]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID del usuario
+ *     responses:
+ *       200:
+ *         description: Lista de cuentas del usuario
+ *       403:
+ *         description: No puedes ver las cuentas de otro usuario
+ */
+router.get('/user/:userId', validateJWT, getAccountsByUserId);
 
 /**
  * @swagger
