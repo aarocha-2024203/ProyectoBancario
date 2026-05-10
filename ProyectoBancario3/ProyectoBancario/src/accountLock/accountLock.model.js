@@ -34,8 +34,15 @@ const accountLockSchema  = mongoose.Schema({
         type: String // También debe ser String si quien bloquea es un USR-
     },
     unlockedBy: {
-        type: String // Para que coincida con el formato USR- del audio
+  type: String,
+  validate: {
+    validator: function(v) {
+      if (!v) return true; // permite null/undefined
+      return v === 'sistema' || v.startsWith('usr_');
     },
+    message: 'El ID del desbloqueador debe empezar con usr_ o ser "sistema"'
+  }
+},
     status: {
         type: String,
         enum: {
