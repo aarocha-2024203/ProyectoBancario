@@ -411,6 +411,15 @@ const handleRoleChange = async (id, currentRole) => {
 /* ══════════════════════════════════
    SECCIÓN: Cuentas
 ══════════════════════════════════ */
+// ── FUERA del componente ──────────────────────────────────────
+const AccountField = ({ label, children }) => (
+  <div className="modal-field">
+    <label className="modal-label">{label}</label>
+    {children}
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────
 const AccountsSection = () => {
   const { data, loading, reload } = useData(getAccounts);
   const [localData, setLocalData] = useState([]);
@@ -424,17 +433,18 @@ const AccountsSection = () => {
   const emptyForm = {
     accountType: 'ahorro', balance: '', openingDate: '',
     status: 'activa', dailyWithdrawalLimit: '', annualInterestRate: '',
-    currencyCode: 'GTQ', userId: '', dpi: '', address: '', jobName: '', monthlyIncome: '',  phone: '',
+    currencyCode: 'GTQ', userId: '', dpi: '', address: '',
+    jobName: '', monthlyIncome: '', phone: '',
   };
   const [form, setForm] = useState(emptyForm);
 
   useEffect(() => { if (data.length > 0) setLocalData(data); }, [data]);
 
-  const fmt = (n) => n != null ? Number(n).toLocaleString('es-GT', { minimumFractionDigits: 2 }) : '—';
+  const fmt     = (n) => n != null ? Number(n).toLocaleString('es-GT', { minimumFractionDigits: 2 }) : '—';
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString('es-GT') : '—';
 
   const filtered = localData.filter(a =>
-    `${a.accountNumber||a.AccountNumber||''} ${a.accountType||a.AccountType||''} ${a.status||a.Status||''} ${a.userId||a.UserId||''}`
+    `${a.accountNumber||''} ${a.accountType||''} ${a.status||''} ${a.userId||''}`
       .toLowerCase().includes(search.toLowerCase())
   );
 
@@ -442,99 +452,98 @@ const AccountsSection = () => {
 
   const openEdit = (a) => {
     setForm({
-      accountType: a.accountType || a.AccountType || 'ahorro',
-      balance: a.balance || a.Balance || '',
-      openingDate: a.openingDate ? a.openingDate.slice(0,10) : '',
-      status: a.status || a.Status || 'activa',
-      dailyWithdrawalLimit: a.dailyWithdrawalLimit || a.DailyWithdrawalLimit || '',
-      annualInterestRate: a.annualInterestRate || a.AnnualInterestRate || '',
-      currencyCode: a.currencyCode || a.CurrencyCode || 'GTQ',
-      userId: a.userId || a.UserId || '',
-      dpi: a.dpi || a.Dpi || '',
-      address: a.address || a.Address || '',
-      name: a.name || a.Name || '',
-      jobName: a.jobName || a.JobName || '',
-      monthlyIncome: a.monthlyIncome || a.MonthlyIncome || '',
+      accountType:          a.accountType          || 'ahorro',
+      balance:              a.balance               || '',
+      openingDate:          a.openingDate           ? a.openingDate.slice(0,10) : '',
+      status:               a.status                || 'activa',
+      dailyWithdrawalLimit: a.dailyWithdrawalLimit  || '',
+      annualInterestRate:   a.annualInterestRate     || '',
+      currencyCode:         a.currencyCode           || 'GTQ',
+      userId:               a.userId                 || '',
+      dpi:                  a.dpi                    || '',
+      address:              a.address                || '',
+      name:                 a.name                   || '',
+      jobName:              a.jobName                || '',
+      monthlyIncome:        a.monthlyIncome           || '',
+      phone:                a.phone                  || '',
     });
     setEditItem(a);
     setModal(true);
   };
 
   const handleSave = async () => {
-  if (!form.userId)        { showError('El ID de usuario es obligatorio'); return; }
-  if (!form.monthlyIncome) { showError('El ingreso mensual es obligatorio'); return; }
-  if (!form.address)       { showError('La dirección es obligatoria'); return; }
-  if (!form.jobName)       { showError('La ocupación es obligatoria'); return; }
-  if (!form.currencyCode)  { showError('La moneda es obligatoria'); return; }
-  if (!form.dpi || form.dpi.length !== 13) { showError('El DPI debe tener 13 dígitos'); return; }
-  if (!form.phone || form.phone.length !== 8) { showError('El teléfono debe tener 8 dígitos'); return; }
-
-  setSaving(true);
-  try {
-    if (editItem) {
-      const accNum = editItem.accountNumber || editItem.AccountNumber;
-      await updateAccount(accNum, {
-        name:          form.name,
-        address:       form.address,
-        jobName:       form.jobName,
-        monthlyIncome: Number(form.monthlyIncome),
-      });
-      setLocalData(prev => prev.map(a =>
-        (a.accountNumber||a.AccountNumber) === accNum ? { ...a, ...form } : a
-      ));
-      showSuccess('Cuenta actualizada');
-    } else {
-      const res = await createAccount({
-        userId:               form.userId,
-        currencyCode:         form.currencyCode,
-        monthlyIncome:        Number(form.monthlyIncome),
-        address:              form.address,
-        jobName:              form.jobName,
-        phone:                form.phone,
-        dpi:                  form.dpi,
-        accountType:          form.accountType,
-        balance:              Number(form.balance) || 0,
-        openingDate:          form.openingDate ? new Date(form.openingDate).toISOString() : new Date().toISOString(),
-        status:               form.status,
-        dailyWithdrawalLimit: Number(form.dailyWithdrawalLimit) || 1000,
-        annualInterestRate:   Number(form.annualInterestRate)   || 0,
-      });
-      const newAccount = res.data?.data || res.data;
-      setLocalData(prev => [newAccount, ...prev]);
-      showSuccess('Cuenta creada exitosamente');
+    if (!form.userId)        { showError('El ID de usuario es obligatorio'); return; }
+    if (!form.monthlyIncome) { showError('El ingreso mensual es obligatorio'); return; }
+    if (!form.address)       { showError('La dirección es obligatoria'); return; }
+    if (!form.jobName)       { showError('La ocupación es obligatoria'); return; }
+    if (!form.currencyCode)  { showError('La moneda es obligatoria'); return; }
+    if (!editItem) {
+      if (!form.dpi || form.dpi.length !== 13)   { showError('El DPI debe tener 13 dígitos'); return; }
+      if (!form.phone || form.phone.length !== 8) { showError('El teléfono debe tener 8 dígitos'); return; }
     }
-    setModal(false);
-    clearDataCache();
-  } catch (e) {
-    showError(e?.response?.data?.message || e?.response?.data?.error || 'Error al guardar');
-  } finally { setSaving(false); }
-};
+
+    setSaving(true);
+    try {
+      if (editItem) {
+        const accNum = editItem.accountNumber;
+        await updateAccount(accNum, {
+          name:          form.name,
+          address:       form.address,
+          jobName:       form.jobName,
+          monthlyIncome: Number(form.monthlyIncome),
+        });
+        setLocalData(prev => prev.map(a =>
+          a.accountNumber === accNum ? { ...a, ...form } : a
+        ));
+        showSuccess('Cuenta actualizada');
+      } else {
+        const res = await createAccount({
+          userId:               form.userId,
+          currencyCode:         form.currencyCode,
+          monthlyIncome:        Number(form.monthlyIncome),
+          address:              form.address,
+          jobName:              form.jobName,
+          phone:                form.phone,
+          dpi:                  form.dpi,
+          accountType:          form.accountType,
+          balance:              Number(form.balance) || 0,
+          openingDate:          form.openingDate ? new Date(form.openingDate).toISOString() : new Date().toISOString(),
+          status:               form.status,
+          dailyWithdrawalLimit: Number(form.dailyWithdrawalLimit) || 1000,
+          annualInterestRate:   Number(form.annualInterestRate)   || 0,
+        });
+        const newAccount = res.data?.data || res.data;
+        setLocalData(prev => [newAccount, ...prev]);
+        showSuccess('Cuenta creada exitosamente');
+      }
+      setModal(false);
+      clearDataCache();
+    } catch (e) {
+      showError(e?.response?.data?.message || 'Error al guardar');
+    } finally { setSaving(false); }
+  };
 
   const handleDelete = async () => {
-    const id = confirm.accountNumber || confirm.AccountNumber || confirm._id;
+    const accNum = confirm.accountNumber;
     try {
-      await deleteAccount(id);
-      setLocalData(prev => prev.filter(a => (a.accountNumber||a.AccountNumber) !== id));
+      await deleteAccount(accNum);
+      setLocalData(prev => prev.filter(a => a.accountNumber !== accNum));
       showSuccess('Cuenta eliminada');
     } catch (e) { showError(e?.response?.data?.message || 'Error al eliminar'); }
     setConfirm(null);
   };
 
   const handleToggleStatus = async (a) => {
-    const id = a._id || a.id;
-    const newStatus = (a.status||a.Status) === 'activa' ? 'inactiva' : 'activa';
+    const accNum    = a.accountNumber;
+    const newStatus = (a.status||'') === 'activa' ? 'inactiva' : 'activa';
     try {
-      await toggleAccountStatus(id, newStatus);
+      await toggleAccountStatus(accNum, newStatus);
       setLocalData(prev => prev.map(x =>
-        (x._id||x.id) === id ? { ...x, status: newStatus, Status: newStatus } : x
+        x.accountNumber === accNum ? { ...x, status: newStatus } : x
       ));
       showSuccess(`Cuenta ${newStatus}`);
     } catch (e) { showError(e?.response?.data?.message || 'Error al cambiar estado'); }
   };
-
-  const F = ({ label, children }) => (
-    <div className="modal-field"><label className="modal-label">{label}</label>{children}</div>
-  );
 
   return (
     <div>
@@ -546,13 +555,13 @@ const AccountsSection = () => {
         </button>
       </div>
 
-      {/* Stats rápidas */}
+      {/* Stats */}
       <div className="stats-grid" style={{ marginBottom:'1.25rem' }}>
         {[
-          { label:'Total cuentas', value: localData.length },
-          { label:'Activas', value: localData.filter(a=>(a.status||a.Status||'').toLowerCase()==='activa').length },
-          { label:'Inactivas', value: localData.filter(a=>(a.status||a.Status||'').toLowerCase()!=='activa').length },
-          { label:'Balance total', value: 'Q ' + fmt(localData.reduce((s,a)=>s+Number(a.balance||a.Balance||0),0)) },
+          { label:'Total',    value: localData.length },
+          { label:'Activas',  value: localData.filter(a=>a.status==='activa').length },
+          { label:'Inactivas',value: localData.filter(a=>a.status==='inactiva').length },
+          { label:'Balance total', value: 'Q ' + fmt(localData.reduce((s,a)=>s+Number(a.balance||0),0)) },
         ].map((s,i) => (
           <div key={i} className="stat-card">
             <div className="stat-card-value" style={{fontSize:'1.4rem'}}>{s.value}</div>
@@ -566,11 +575,20 @@ const AccountsSection = () => {
           <span className="table-title">Todas las cuentas ({filtered.length})</span>
           <div style={{display:'flex',gap:'.75rem',alignItems:'center'}}>
             <div className="search-input-wrap">
-              <span className="search-icon"><svg viewBox="0 0 24 24" fill="none" width="14" height="14"><circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.5"/><path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg></span>
-              <input className="search-input" placeholder="Buscar cuenta..." value={search} onChange={e=>setSearch(e.target.value)}/>
+              <span className="search-icon">
+                <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+                  <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.5"/>
+                  <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </span>
+              <input className="search-input" placeholder="Buscar cuenta..."
+                value={search} onChange={e=>setSearch(e.target.value)}/>
             </div>
-            <button className="btn-secondary" onClick={()=>{clearDataCache();reload();}}>
-              <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+            <button className="btn-secondary" onClick={()=>{ clearDataCache(); reload(); }}>
+              <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+                <path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <path d="M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
               Actualizar
             </button>
           </div>
@@ -578,41 +596,48 @@ const AccountsSection = () => {
 
         <table className="data-table">
           <thead>
-            <tr><th>N° Cuenta</th><th>Tipo</th><th>Usuario</th><th>Balance</th><th>Moneda</th><th>Estado</th><th>Apertura</th><th>Acciones</th></tr>
+            <tr>
+              <th>N° Cuenta</th><th>Tipo</th><th>Titular</th><th>Usuario ID</th>
+              <th>Balance</th><th>Moneda</th><th>Estado</th><th>Apertura</th><th>Acciones</th>
+            </tr>
           </thead>
           <tbody>
-            {loading && localData.length===0 ? <LoadingRows cols={8}/> : filtered.map((a,i) => {
-              const accNum = a.accountNumber || a.AccountNumber || '—';
-              const status = (a.status || a.Status || '').toLowerCase();
+            {loading && localData.length===0 ? <LoadingRows cols={9}/> : filtered.map((a,i) => {
+              const status = (a.status||'').toLowerCase();
               return (
-                <tr key={accNum+i}>
-                  <td style={{fontFamily:'monospace',color:'var(--gold-pure)',fontSize:'.85rem'}}>{accNum}</td>
-                  <td><Badge value={a.accountType||a.AccountType}/></td>
-                  <td style={{color:'var(--muted)',fontSize:'.8rem'}}>{a.userId||a.UserId||'—'}</td>
-                  <td style={{fontWeight:500,color:'var(--white)'}}>Q {fmt(a.balance||a.Balance)}</td>
-                  <td style={{color:'var(--muted)',fontSize:'.8rem'}}>{a.currencyCode||a.CurrencyCode||'GTQ'}</td>
-                  <td><Badge value={a.status||a.Status||'—'}/></td>
+                <tr key={a.accountNumber||i}>
+                  <td style={{fontFamily:'monospace',color:'var(--gold-pure)',fontSize:'.85rem'}}>{a.accountNumber||'—'}</td>
+                  <td><Badge value={a.accountType}/></td>
+                  <td style={{color:'var(--white)',fontSize:'.85rem'}}>{a.name||'—'}</td>
+                  <td style={{color:'var(--muted)',fontSize:'.78rem',fontFamily:'monospace'}}>{a.userId||'—'}</td>
+                  <td style={{fontWeight:500,color:'var(--white)'}}>Q {fmt(a.balance)}</td>
+                  <td style={{color:'var(--muted)',fontSize:'.8rem'}}>{a.currencyCode||'GTQ'}</td>
+                  <td><Badge value={a.status||'—'}/></td>
                   <td style={{color:'var(--muted)',fontSize:'.8rem'}}>{fmtDate(a.openingDate||a.createdAt)}</td>
                   <td>
                     <div className="action-btns">
-                      {/* Ver detalle */}
                       <button className="btn-icon" title="Ver detalle" onClick={()=>setDetailModal(a)}>
-                        <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5"/><path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5"/>
+                          <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                        </svg>
                       </button>
-                      {/* Editar */}
                       <button className="btn-icon" title="Editar" onClick={()=>openEdit(a)}>
-                        <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+                          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                        </svg>
                       </button>
-                      {/* Toggle estado */}
                       <button className="btn-icon" title={status==='activa'?'Desactivar':'Activar'} onClick={()=>handleToggleStatus(a)}>
                         {status==='activa'
                           ? <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M18.36 6.64A9 9 0 015.64 19.36M6.34 6.34A9 9 0 0019 17.65M1 1l22 22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
                           : <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="#4caf7d" strokeWidth="1.5" strokeLinecap="round"/><path d="M22 4L12 14.01l-3-3" stroke="#4caf7d" strokeWidth="1.5" strokeLinecap="round"/></svg>
                         }
                       </button>
-                      {/* Eliminar */}
                       <button className="btn-icon danger" title="Eliminar" onClick={()=>setConfirm(a)}>
-                        <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+                          <path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
                       </button>
                     </div>
                   </td>
@@ -633,119 +658,139 @@ const AccountsSection = () => {
               <button className="modal-close" onClick={()=>setModal(false)}>✕</button>
             </div>
             <div className="modal-body">
+
+              {/* ── CREAR ── */}
               {!editItem && (
-  <>
-    <div className="modal-fields-row">
-      <F label="ID de usuario *">
-        <input className="modal-input" placeholder="usr_XXXX" value={form.userId}
-          onChange={e=>setForm(p=>({...p,userId:e.target.value}))}/>
-      </F>
-      <F label="Moneda *">
-        <select className="modal-select" value={form.currencyCode}
-          onChange={e=>setForm(p=>({...p,currencyCode:e.target.value}))}>
-          <option value="GTQ">GTQ — Quetzal</option>
-          <option value="USD">USD — Dólar</option>
-          <option value="EUR">EUR — Euro</option>
-        </select>
-      </F>
-    </div>
+                <>
+                  <div className="modal-fields-row">
+                    <AccountField label="ID de usuario *">
+                      <input className="modal-input" placeholder="usr_XXXX"
+                        value={form.userId}
+                        onChange={e=>setForm(p=>({...p,userId:e.target.value}))}/>
+                    </AccountField>
+                    <AccountField label="Moneda *">
+                      <select className="modal-select" value={form.currencyCode}
+                        onChange={e=>setForm(p=>({...p,currencyCode:e.target.value}))}>
+                        <option value="GTQ">GTQ — Quetzal</option>
+                        <option value="USD">USD — Dólar</option>
+                        <option value="EUR">EUR — Euro</option>
+                      </select>
+                    </AccountField>
+                  </div>
 
-    <div className="modal-fields-row">
-      <F label="Ocupación *">
-        <input className="modal-input" placeholder="Ingeniero, Comerciante..." value={form.jobName||''}
-          onChange={e=>setForm(p=>({...p,jobName:e.target.value}))}/>
-      </F>
-      <F label="Ingreso mensual (Q) *">
-        <input className="modal-input" type="number" placeholder="5000" value={form.monthlyIncome||''}
-          onChange={e=>setForm(p=>({...p,monthlyIncome:e.target.value}))}/>
-      </F>
-    </div>
+                  <div className="modal-fields-row">
+                    <AccountField label="Ocupación *">
+                      <input className="modal-input" placeholder="Ingeniero, Comerciante..."
+                        value={form.jobName}
+                        onChange={e=>setForm(p=>({...p,jobName:e.target.value}))}/>
+                    </AccountField>
+                    <AccountField label="Ingreso mensual (Q) *">
+                      <input className="modal-input" type="number" placeholder="5000"
+                        value={form.monthlyIncome}
+                        onChange={e=>setForm(p=>({...p,monthlyIncome:e.target.value}))}/>
+                    </AccountField>
+                  </div>
 
-    <F label="Dirección *">
-      <input className="modal-input" placeholder="Zona 10, Ciudad de Guatemala" value={form.address||''}
-        onChange={e=>setForm(p=>({...p,address:e.target.value}))}/>
-    </F>
+                  <AccountField label="Dirección *">
+                    <input className="modal-input" placeholder="Zona 10, Ciudad de Guatemala"
+                      value={form.address}
+                      onChange={e=>setForm(p=>({...p,address:e.target.value}))}/>
+                  </AccountField>
 
-    <div className="modal-fields-row">
-      <F label="DPI (13 dígitos) *">
-        <input className="modal-input" placeholder="1234567890123" maxLength={13} value={form.dpi||''}
-          onChange={e=>setForm(p=>({...p,dpi:e.target.value.replace(/\D/g,'')}))}/>
-      </F>
-      <F label="Teléfono (8 dígitos) *">
-        <input className="modal-input" placeholder="55123456" maxLength={8} value={form.phone||''}
-          onChange={e=>setForm(p=>({...p,phone:e.target.value.replace(/\D/g,'')}))}/>
-      </F>
-    </div>
+                  <div className="modal-fields-row">
+                    <AccountField label="DPI (13 dígitos) *">
+                      <input className="modal-input" placeholder="1234567890123" maxLength={13}
+                        value={form.dpi}
+                        onChange={e=>setForm(p=>({...p,dpi:e.target.value.replace(/\D/g,'')}))}/>
+                    </AccountField>
+                    <AccountField label="Teléfono (8 dígitos) *">
+                      <input className="modal-input" placeholder="55123456" maxLength={8}
+                        value={form.phone}
+                        onChange={e=>setForm(p=>({...p,phone:e.target.value.replace(/\D/g,'')}))}/>
+                    </AccountField>
+                  </div>
 
-    <div className="modal-fields-row">
-      <F label="Tipo de cuenta">
-        <select className="modal-select" value={form.accountType}
-          onChange={e=>setForm(p=>({...p,accountType:e.target.value}))}>
-          <option value="ahorro">Ahorro</option>
-          <option value="corriente">Corriente</option>
-          <option value="nomina">Nómina</option>
-        </select>
-      </F>
-      <F label="Balance inicial">
-        <input className="modal-input" type="number" placeholder="0.00" value={form.balance||''}
-          onChange={e=>setForm(p=>({...p,balance:e.target.value}))}/>
-      </F>
-    </div>
+                  <div className="modal-fields-row">
+                    <AccountField label="Tipo de cuenta">
+                      <select className="modal-select" value={form.accountType}
+                        onChange={e=>setForm(p=>({...p,accountType:e.target.value}))}>
+                        <option value="ahorro">Ahorro</option>
+                        <option value="corriente">Corriente</option>
+                        <option value="nomina">Nómina</option>
+                      </select>
+                    </AccountField>
+                    <AccountField label="Balance inicial">
+                      <input className="modal-input" type="number" placeholder="0.00"
+                        value={form.balance}
+                        onChange={e=>setForm(p=>({...p,balance:e.target.value}))}/>
+                    </AccountField>
+                  </div>
 
-    <div className="modal-fields-row">
-      <F label="Límite retiro diario">
-        <input className="modal-input" type="number" placeholder="1000" value={form.dailyWithdrawalLimit||''}
-          onChange={e=>setForm(p=>({...p,dailyWithdrawalLimit:e.target.value}))}/>
-      </F>
-      <F label="Tasa interés anual (%)">
-        <input className="modal-input" type="number" placeholder="4.5" value={form.annualInterestRate||''}
-          onChange={e=>setForm(p=>({...p,annualInterestRate:e.target.value}))}/>
-      </F>
-    </div>
+                  <div className="modal-fields-row">
+                    <AccountField label="Límite retiro diario">
+                      <input className="modal-input" type="number" placeholder="1000"
+                        value={form.dailyWithdrawalLimit}
+                        onChange={e=>setForm(p=>({...p,dailyWithdrawalLimit:e.target.value}))}/>
+                    </AccountField>
+                    <AccountField label="Tasa interés anual (%)">
+                      <input className="modal-input" type="number" placeholder="4.5"
+                        value={form.annualInterestRate}
+                        onChange={e=>setForm(p=>({...p,annualInterestRate:e.target.value}))}/>
+                    </AccountField>
+                  </div>
 
-    <div className="modal-fields-row">
-      <F label="Fecha apertura">
-        <input className="modal-input" type="date" value={form.openingDate||''}
-          onChange={e=>setForm(p=>({...p,openingDate:e.target.value}))}/>
-      </F>
-      <F label="Estado inicial">
-        <select className="modal-select" value={form.status}
-          onChange={e=>setForm(p=>({...p,status:e.target.value}))}>
-          <option value="activa">Activa</option>
-          <option value="inactiva">Inactiva</option>
-        </select>
-      </F>
-    </div>
+                  <div className="modal-fields-row">
+                    <AccountField label="Fecha apertura">
+                      <input className="modal-input" type="date"
+                        value={form.openingDate}
+                        onChange={e=>setForm(p=>({...p,openingDate:e.target.value}))}/>
+                    </AccountField>
+                    <AccountField label="Estado inicial">
+                      <select className="modal-select" value={form.status}
+                        onChange={e=>setForm(p=>({...p,status:e.target.value}))}>
+                        <option value="activa">Activa</option>
+                        <option value="inactiva">Inactiva</option>
+                      </select>
+                    </AccountField>
+                  </div>
+                </>
+              )}
 
-    <div style={{background:'rgba(224,92,92,0.06)',border:'1px solid rgba(224,92,92,0.15)',borderRadius:8,padding:'.85rem 1rem',fontSize:'.78rem',color:'rgba(224,92,92,0.8)',lineHeight:1.5}}>
-      ⚠️ Antes de crear cuentas cambia <strong>auth-service:3005</strong> por <strong>localhost:3005</strong> en <strong>accounts.controller.js</strong> del Banking-Service.
-    </div>
-  </>
-)}
-
+              {/* ── EDITAR ── */}
               {editItem && (
                 <>
                   <div style={{background:'rgba(200,169,81,0.05)',border:'1px solid rgba(200,169,81,0.12)',borderRadius:8,padding:'.85rem 1rem',marginBottom:'.5rem',fontSize:'.82rem',color:'var(--gold-bright)'}}>
-                    Cuenta: <strong style={{fontFamily:'monospace'}}>{editItem.accountNumber||editItem.AccountNumber}</strong>
+                    Cuenta: <strong style={{fontFamily:'monospace'}}>{editItem.accountNumber}</strong>
                   </div>
                   <div className="modal-fields-row">
-                    <F label="Nombre titular">
-                      <input className="modal-input" placeholder="Juan" value={form.name||''}
+                    <AccountField label="Nombre titular">
+                      <input className="modal-input" placeholder="Juan"
+                        value={form.name}
                         onChange={e=>setForm(p=>({...p,name:e.target.value}))}/>
-                    </F>
-                    <F label="Ocupación">
-                      <input className="modal-input" placeholder="Desarrollador" value={form.jobName||''}
+                    </AccountField>
+                    <AccountField label="Ocupación">
+                      <input className="modal-input" placeholder="Desarrollador"
+                        value={form.jobName}
                         onChange={e=>setForm(p=>({...p,jobName:e.target.value}))}/>
-                    </F>
+                    </AccountField>
                   </div>
-                  <F label="Dirección">
-                    <input className="modal-input" placeholder="Zona 1, Ciudad de Guatemala" value={form.address||''}
+                  <AccountField label="Dirección">
+                    <input className="modal-input" placeholder="Zona 1, Ciudad de Guatemala"
+                      value={form.address}
                       onChange={e=>setForm(p=>({...p,address:e.target.value}))}/>
-                  </F>
-                  <F label="Ingreso mensual (Q)">
-                    <input className="modal-input" type="number" placeholder="5000" value={form.monthlyIncome||''}
-                      onChange={e=>setForm(p=>({...p,monthlyIncome:e.target.value}))}/>
-                  </F>
+                  </AccountField>
+                  <div className="modal-fields-row">
+                    <AccountField label="Ingreso mensual (Q)">
+                      <input className="modal-input" type="number" placeholder="5000"
+                        value={form.monthlyIncome}
+                        onChange={e=>setForm(p=>({...p,monthlyIncome:e.target.value}))}/>
+                    </AccountField>
+                    <AccountField label="Teléfono (8 dígitos)">
+                      <input className="modal-input" placeholder="55123456" maxLength={8}
+                        value={form.phone}
+                        onChange={e=>setForm(p=>({...p,phone:e.target.value.replace(/\D/g,'')}))}/>
+                    </AccountField>
+                  </div>
                 </>
               )}
             </div>
@@ -769,17 +814,19 @@ const AccountsSection = () => {
             </div>
             <div className="modal-body">
               {[
-                { label:'N° Cuenta',    value: detailModal.accountNumber||detailModal.AccountNumber, mono:true },
-                { label:'Tipo',         value: detailModal.accountType||detailModal.AccountType },
-                { label:'Balance',      value: 'Q ' + fmt(detailModal.balance||detailModal.Balance) },
-                { label:'Moneda',       value: detailModal.currencyCode||detailModal.CurrencyCode||'GTQ' },
-                { label:'Estado',       value: detailModal.status||detailModal.Status },
-                { label:'Usuario',      value: detailModal.userId||detailModal.UserId, mono:true },
-                { label:'DPI',          value: detailModal.dpi||detailModal.Dpi||'—' },
-                { label:'Retiro diario',value: 'Q ' + fmt(detailModal.dailyWithdrawalLimit||detailModal.DailyWithdrawalLimit||0) },
-                { label:'Tasa interés', value: (detailModal.annualInterestRate||detailModal.AnnualInterestRate||0) + '%' },
-                { label:'Dirección',    value: detailModal.address||detailModal.Address||'—' },
-                { label:'Apertura',     value: fmtDate(detailModal.openingDate||detailModal.createdAt) },
+                { label:'N° Cuenta',     value: detailModal.accountNumber,       mono:true },
+                { label:'Tipo',          value: detailModal.accountType },
+                { label:'Titular',       value: detailModal.name },
+                { label:'Balance',       value: 'Q ' + fmt(detailModal.balance) },
+                { label:'Moneda',        value: detailModal.currencyCode||'GTQ' },
+                { label:'Estado',        value: detailModal.status },
+                { label:'Usuario ID',    value: detailModal.userId,              mono:true },
+                { label:'DPI',           value: detailModal.dpi||'—' },
+                { label:'Teléfono',      value: detailModal.phone||'—' },
+                { label:'Retiro diario', value: 'Q ' + fmt(detailModal.dailyWithdrawalLimit||0) },
+                { label:'Tasa interés',  value: (detailModal.annualInterestRate||0) + '%' },
+                { label:'Dirección',     value: detailModal.address||'—' },
+                { label:'Apertura',      value: fmtDate(detailModal.openingDate||detailModal.createdAt) },
               ].map(({ label, value, mono }) => (
                 <div key={label} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'.65rem 0',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
                   <span style={{fontSize:'.72rem',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.08em',fontWeight:500}}>{label}</span>
@@ -789,7 +836,7 @@ const AccountsSection = () => {
             </div>
             <div className="modal-footer">
               <button className="btn-cancel" onClick={()=>setDetailModal(null)}>Cerrar</button>
-              <button className="btn-save" onClick={()=>{setDetailModal(null);openEdit(detailModal);}}>Editar</button>
+              <button className="btn-save" onClick={()=>{ setDetailModal(null); openEdit(detailModal); }}>Editar</button>
             </div>
           </div>
         </div>
@@ -798,7 +845,7 @@ const AccountsSection = () => {
       <ConfirmModal
         open={!!confirm}
         title="Eliminar cuenta"
-        message={`¿Eliminar la cuenta ${confirm?.accountNumber||confirm?.AccountNumber}? Esta acción no se puede deshacer.`}
+        message={`¿Eliminar la cuenta ${confirm?.accountNumber}? Esta acción no se puede deshacer.`}
         onConfirm={handleDelete}
         onCancel={()=>setConfirm(null)}
       />
@@ -1101,6 +1148,15 @@ const CoinsSection = () => {
 /* ══════════════════════════════════
    SECCIÓN: Cuentas Bloqueadas
 ══════════════════════════════════ */
+// ── FUERA del componente ──────────────────────────────────────
+const LockField = ({ label, children }) => (
+  <div className="modal-field">
+    <label className="modal-label">{label}</label>
+    {children}
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────
 const LocksSection = () => {
   const { data, loading, reload } = useData(getAccountLocks);
   const [localData, setLocalData] = useState([]);
@@ -1122,7 +1178,7 @@ const LocksSection = () => {
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString('es-GT') : '—';
 
   const filtered = localData.filter(l =>
-    `${l.accountId||l.AccountId||''} ${l.userId||l.UserId||''} ${l.lockReason||l.LockReason||''} ${l.status||l.Status||''}`
+    `${l.accountId||''} ${l.userId||''} ${l.lockReason||''} ${l.status||''}`
       .toLowerCase().includes(search.toLowerCase())
   );
 
@@ -1130,14 +1186,14 @@ const LocksSection = () => {
 
   const openEdit = (l) => {
     setForm({
-      accountId:   l.accountId   || l.AccountId   || '',
-      userId:      l.userId      || l.UserId       || '',
-      lockReason:  l.lockReason  || l.LockReason   || 'seguridad',
-      description: l.description || l.Description  || '',
-      lockDate:    l.lockDate    || l.LockDate      ? (l.lockDate||l.LockDate).slice(0,16) : '',
-      unlockDate:  l.unlockDate  || l.UnlockDate    ? (l.unlockDate||l.UnlockDate||'').slice(0,16) : '',
-      lockedBy:    l.lockedBy    || l.LockedBy      || '',
-      status:      l.status      || l.Status        || 'bloqueado',
+      accountId:   l.accountId   || '',
+      userId:      l.userId      || '',
+      lockReason:  l.lockReason  || 'seguridad',
+      description: l.description || '',
+      lockDate:    l.lockDate    ? l.lockDate.slice(0,16)   : '',
+      unlockDate:  l.unlockDate  ? l.unlockDate.slice(0,16) : '',
+      lockedBy:    l.lockedBy    || '',
+      status:      l.status      || 'bloqueado',
     });
     setEditItem(l);
     setModal(true);
@@ -1145,7 +1201,7 @@ const LocksSection = () => {
 
   const handleSave = async () => {
     if (!form.accountId || !form.userId) {
-      showError('ID de cuenta e ID de usuario son obligatorios'); return;
+      showError('N° de cuenta e ID de usuario son obligatorios'); return;
     }
     setSaving(true);
     try {
@@ -1154,16 +1210,16 @@ const LocksSection = () => {
         userId:      form.userId,
         lockReason:  form.lockReason,
         description: form.description,
-        lockDate:    form.lockDate || new Date().toISOString(),
+        lockDate:    form.lockDate   || new Date().toISOString(),
         unlockDate:  form.unlockDate || null,
-        lockedBy:    form.lockedBy || form.userId,
+        lockedBy:    form.lockedBy   || form.userId,
         unlockedBy:  null,
         status:      form.status,
       };
 
       if (editItem) {
         const id = editItem._id || editItem.id;
-        await updateAccountLock(id, { ...payload, unlockedBy: editItem.unlockedBy });
+        await updateAccountLock(id, payload);
         setLocalData(prev => prev.map(l =>
           (l._id||l.id) === id ? { ...l, ...payload } : l
         ));
@@ -1172,7 +1228,7 @@ const LocksSection = () => {
         const res = await createAccountLock(payload);
         const newLock = res.data?.data || res.data;
         setLocalData(prev => [newLock, ...prev]);
-        showSuccess('Bloqueo creado exitosamente');
+        showSuccess('Bloqueo creado');
       }
       setModal(false);
       clearDataCache();
@@ -1190,16 +1246,12 @@ const LocksSection = () => {
     setConfirm(null);
   };
 
-  const F = ({ label, children }) => (
-    <div className="modal-field"><label className="modal-label">{label}</label>{children}</div>
-  );
-
   const lockReasons = ['seguridad','fraude','solicitud_cliente','deuda','inactividad','otro'];
 
   return (
     <div>
       <div className="page-header">
-        <div><h1 className="page-title">Cuentas Bloqueadas</h1><p className="page-subtitle">Gestión de bloqueos y restricciones de cuentas</p></div>
+        <div><h1 className="page-title">Cuentas Bloqueadas</h1><p className="page-subtitle">Gestión de bloqueos y restricciones</p></div>
         <button className="btn-add" onClick={openCreate}>
           <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
           Nuevo bloqueo
@@ -1210,9 +1262,9 @@ const LocksSection = () => {
       <div className="stats-grid" style={{marginBottom:'1.25rem'}}>
         {[
           { label:'Total bloqueos', value: localData.length },
-          { label:'Por seguridad', value: localData.filter(l=>(l.lockReason||l.LockReason||'').toLowerCase()==='seguridad').length },
-          { label:'Por fraude', value: localData.filter(l=>(l.lockReason||l.LockReason||'').toLowerCase()==='fraude').length },
-          { label:'Otros motivos', value: localData.filter(l=>!['seguridad','fraude'].includes((l.lockReason||l.LockReason||'').toLowerCase())).length },
+          { label:'Por seguridad',  value: localData.filter(l=>(l.lockReason||'').toLowerCase()==='seguridad').length },
+          { label:'Por fraude',     value: localData.filter(l=>(l.lockReason||'').toLowerCase()==='fraude').length },
+          { label:'Otros motivos',  value: localData.filter(l=>!['seguridad','fraude'].includes((l.lockReason||'').toLowerCase())).length },
         ].map((s,i) => (
           <div key={i} className="stat-card">
             <div className="stat-card-value" style={{fontSize:'1.4rem'}}>{s.value}</div>
@@ -1223,14 +1275,23 @@ const LocksSection = () => {
 
       <div className="table-card">
         <div className="table-header">
-          <span className="table-title">Bloqueos activos ({filtered.length})</span>
+          <span className="table-title">Bloqueos ({filtered.length})</span>
           <div style={{display:'flex',gap:'.75rem',alignItems:'center'}}>
             <div className="search-input-wrap">
-              <span className="search-icon"><svg viewBox="0 0 24 24" fill="none" width="14" height="14"><circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.5"/><path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg></span>
-              <input className="search-input" placeholder="Buscar bloqueo..." value={search} onChange={e=>setSearch(e.target.value)}/>
+              <span className="search-icon">
+                <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+                  <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.5"/>
+                  <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </span>
+              <input className="search-input" placeholder="Buscar bloqueo..."
+                value={search} onChange={e=>setSearch(e.target.value)}/>
             </div>
-            <button className="btn-secondary" onClick={()=>{clearDataCache();reload();}}>
-              <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+            <button className="btn-secondary" onClick={()=>{ clearDataCache(); reload(); }}>
+              <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+                <path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <path d="M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
               Actualizar
             </button>
           </div>
@@ -1238,25 +1299,33 @@ const LocksSection = () => {
 
         <table className="data-table">
           <thead>
-            <tr><th>Cuenta</th><th>Usuario</th><th>Motivo</th><th>Descripción</th><th>Bloqueado por</th><th>Fecha bloqueo</th><th>Estado</th><th>Acciones</th></tr>
+            <tr>
+              <th>Cuenta</th><th>Usuario</th><th>Motivo</th>
+              <th>Descripción</th><th>Bloqueado por</th><th>Fecha</th><th>Estado</th><th>Acciones</th>
+            </tr>
           </thead>
           <tbody>
             {loading && localData.length===0 ? <LoadingRows cols={8}/> : filtered.map((l,i) => (
               <tr key={l._id||l.id||i}>
-                <td style={{fontFamily:'monospace',color:'var(--gold-pure)',fontSize:'.85rem'}}>{l.accountId||l.AccountId||'—'}</td>
-                <td style={{color:'var(--muted)',fontSize:'.8rem'}}>{l.userId||l.UserId||'—'}</td>
-                <td><Badge value={l.lockReason||l.LockReason}/></td>
-                <td style={{color:'var(--muted)',fontSize:'.8rem',maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.description||l.Description||'—'}</td>
-                <td style={{color:'var(--muted)',fontSize:'.8rem'}}>{l.lockedBy||l.LockedBy||'—'}</td>
-                <td style={{color:'var(--muted)',fontSize:'.8rem'}}>{fmtDate(l.lockDate||l.LockDate||l.createdAt)}</td>
-                <td><Badge value={l.status||l.Status||'bloqueado'}/></td>
+                <td style={{fontFamily:'monospace',color:'var(--gold-pure)',fontSize:'.85rem'}}>{l.accountId||'—'}</td>
+                <td style={{color:'var(--muted)',fontSize:'.8rem'}}>{l.userId||'—'}</td>
+                <td><Badge value={l.lockReason}/></td>
+                <td style={{color:'var(--muted)',fontSize:'.8rem',maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.description||'—'}</td>
+                <td style={{color:'var(--muted)',fontSize:'.8rem'}}>{l.lockedBy||'—'}</td>
+                <td style={{color:'var(--muted)',fontSize:'.8rem'}}>{fmtDate(l.lockDate||l.createdAt)}</td>
+                <td><Badge value={l.status||'bloqueado'}/></td>
                 <td>
                   <div className="action-btns">
                     <button className="btn-icon" title="Editar" onClick={()=>openEdit(l)}>
-                      <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                      <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
                     </button>
                     <button className="btn-icon danger" title="Eliminar / Desbloquear" onClick={()=>setConfirm(l)}>
-                      <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+                        <path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
                     </button>
                   </div>
                 </td>
@@ -1277,56 +1346,61 @@ const LocksSection = () => {
             </div>
             <div className="modal-body">
               <div className="modal-fields-row">
-                <F label="N° de cuenta">
-                  <input className="modal-input" placeholder="ACC-000-0000" value={form.accountId}
+                <LockField label="N° de cuenta *">
+                  <input className="modal-input" placeholder="ACC-000-0000"
+                    value={form.accountId}
                     onChange={e=>setForm(p=>({...p,accountId:e.target.value}))}/>
-                </F>
-                <F label="ID de usuario">
-                  <input className="modal-input" placeholder="usr_XXXX" value={form.userId}
+                </LockField>
+                <LockField label="ID de usuario *">
+                  <input className="modal-input" placeholder="usr_XXXX"
+                    value={form.userId}
                     onChange={e=>setForm(p=>({...p,userId:e.target.value}))}/>
-                </F>
+                </LockField>
               </div>
 
               <div className="modal-fields-row">
-                <F label="Motivo del bloqueo">
+                <LockField label="Motivo del bloqueo">
                   <select className="modal-select" value={form.lockReason}
                     onChange={e=>setForm(p=>({...p,lockReason:e.target.value}))}>
                     {lockReasons.map(r => (
                       <option key={r} value={r}>{r.replace('_',' ')}</option>
                     ))}
                   </select>
-                </F>
-                <F label="Estado">
+                </LockField>
+                <LockField label="Estado">
                   <select className="modal-select" value={form.status}
                     onChange={e=>setForm(p=>({...p,status:e.target.value}))}>
                     <option value="bloqueado">Bloqueado</option>
                     <option value="desbloqueado">Desbloqueado</option>
                   </select>
-                </F>
+                </LockField>
               </div>
 
-              <F label="Descripción">
-                <input className="modal-input" placeholder="Describe el motivo del bloqueo..."
-                  value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))}/>
-              </F>
+              <LockField label="Descripción">
+                <input className="modal-input" placeholder="Describe el motivo..."
+                  value={form.description}
+                  onChange={e=>setForm(p=>({...p,description:e.target.value}))}/>
+              </LockField>
 
               <div className="modal-fields-row">
-                <F label="Fecha de bloqueo">
-                  <input className="modal-input" type="datetime-local" value={form.lockDate}
+                <LockField label="Fecha de bloqueo">
+                  <input className="modal-input" type="datetime-local"
+                    value={form.lockDate}
                     onChange={e=>setForm(p=>({...p,lockDate:e.target.value}))}/>
-                </F>
-                <F label="Fecha de desbloqueo">
-                  <input className="modal-input" type="datetime-local" value={form.unlockDate}
+                </LockField>
+                <LockField label="Fecha de desbloqueo">
+                  <input className="modal-input" type="datetime-local"
+                    value={form.unlockDate}
                     onChange={e=>setForm(p=>({...p,unlockDate:e.target.value}))}/>
-                </F>
+                </LockField>
               </div>
 
-              <F label="Bloqueado por (ID usuario admin)">
-                <input className="modal-input" placeholder="usr_XXXX" value={form.lockedBy}
+              <LockField label="Bloqueado por (ID usuario admin)">
+                <input className="modal-input" placeholder="usr_XXXX"
+                  value={form.lockedBy}
                   onChange={e=>setForm(p=>({...p,lockedBy:e.target.value}))}/>
-              </F>
+              </LockField>
 
-              {/* Aviso */}
               <div style={{background:'rgba(224,92,92,0.06)',border:'1px solid rgba(224,92,92,0.15)',borderRadius:8,padding:'.85rem 1rem',display:'flex',gap:'.6rem',alignItems:'flex-start'}}>
                 <svg viewBox="0 0 24 24" fill="none" width="15" height="15" style={{flexShrink:0,marginTop:1}}>
                   <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#e05c5c" strokeWidth="1.5" strokeLinecap="round"/>
@@ -1350,14 +1424,13 @@ const LocksSection = () => {
       <ConfirmModal
         open={!!confirm}
         title="Eliminar bloqueo"
-        message={`¿Desbloquear la cuenta ${confirm?.accountId||confirm?.AccountId}? El usuario podrá operar nuevamente.`}
+        message={`¿Desbloquear la cuenta ${confirm?.accountId}? El usuario podrá operar nuevamente.`}
         onConfirm={handleDelete}
         onCancel={()=>setConfirm(null)}
       />
     </div>
   );
 };
-
 /* ══════════════════════════════════
    SECCIÓN: Servicios
 ══════════════════════════════════ */
