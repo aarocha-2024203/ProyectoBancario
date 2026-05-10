@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../../shared/components/layout/DashboardLayout';
-import { useData } from '../../../shared/hooks/useData';
+import { useData, clearDataCache } from '../../../shared/hooks/useData';
 import { showSuccess, showError } from '../../../shared/utils/toast';
 import {
   getAccounts, getCards, getTransactions, getLoans,
-  getCoins, getAccountLocks, getServices, createCoin,
-  deleteCoin, toggleCardStatus, deleteLoan, deleteAccountLock,
-  createAccount, deleteAccount, createLoan,
+  getCoins, getAccountLocks, getServices, getAccountStatements,
+  createCoin, deleteCoin, toggleCardStatus, deleteLoan,
+  deleteAccountLock, createAccount, deleteAccount, createLoan,
+  createDeposit, createWithdrawal,
+  getAccountsDelayed, getCardsDelayed, getLoansDelayed, updateAccount, toggleAccountStatus,
+  getAccountLock, updateAccountLock,
 } from '../../../shared/api/banking';
 import { getUsers, changeRole } from '../../../shared/api/users';
 import ProfilePage from '../../profile/ProfilePage';
+import useAuthStore from '../../../features/auth/store/authStore';
+
 
 /* ── helpers ── */
 const fmt = (n) => n != null ? Number(n).toLocaleString('es-GT', { minimumFractionDigits: 2 }) : '—';
@@ -75,17 +80,22 @@ const ConfirmModal = ({ open, title, message, onConfirm, onCancel }) => {
    SECCIÓN: Overview
 ══════════════════════════════════ */
 const OverviewSection = () => {
-  const { data: accounts, loading: la } = useData(getAccounts);
-  const { data: cards,    loading: lc } = useData(getCards);
-  const { data: loans,    loading: ll } = useData(getLoans);
   const { data: users,    loading: lu } = useData(getUsers);
+  const { data: accounts, loading: la } = useData(getAccountsDelayed);
+  const { data: cards,    loading: lc } = useData(getCardsDelayed);
+  const { data: loans,    loading: ll } = useData(getLoansDelayed);
 
   const stats = [
-    { label:'Usuarios registrados', value: lu ? '...' : users.length, icon:<svg viewBox="0 0 24 24" fill="none" width="20" height="20"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="#c8a951" strokeWidth="1.5" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="#c8a951" strokeWidth="1.5"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="#c8a951" strokeWidth="1.5" strokeLinecap="round"/></svg> },
-    { label:'Cuentas activas', value: la ? '...' : accounts.filter(a=>a.status==='activa'||a.Status==='activa').length, icon:<svg viewBox="0 0 24 24" fill="none" width="20" height="20"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="#c8a951" strokeWidth="1.5" strokeLinecap="round"/></svg> },
-    { label:'Tarjetas emitidas', value: lc ? '...' : cards.length, icon:<svg viewBox="0 0 24 24" fill="none" width="20" height="20"><rect x="2" y="5" width="20" height="14" rx="2" stroke="#c8a951" strokeWidth="1.5"/><path d="M2 10h20" stroke="#c8a951" strokeWidth="1.5" strokeLinecap="round"/></svg> },
-    { label:'Préstamos activos', value: ll ? '...' : loans.length, icon:<svg viewBox="0 0 24 24" fill="none" width="20" height="20"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="#c8a951" strokeWidth="1.5" strokeLinecap="round"/></svg> },
-    { label:'Total en cuentas', value: la ? '...' : 'Q ' + fmt(accounts.reduce((s,a)=>s+Number(a.balance||a.Balance||0),0)), icon:<svg viewBox="0 0 24 24" fill="none" width="20" height="20"><circle cx="12" cy="12" r="10" stroke="#c8a951" strokeWidth="1.5"/><path d="M12 6v12M9 9h4.5a1.5 1.5 0 010 3H9m0 0h5.5a1.5 1.5 0 010 3H9" stroke="#c8a951" strokeWidth="1.5" strokeLinecap="round"/></svg> },
+    { label:'Usuarios registrados', value: lu ? '...' : users.length,
+      icon:<svg viewBox="0 0 24 24" fill="none" width="20" height="20"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="#c8a951" strokeWidth="1.5" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="#c8a951" strokeWidth="1.5"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="#c8a951" strokeWidth="1.5" strokeLinecap="round"/></svg> },
+    { label:'Cuentas activas', value: la ? '...' : accounts.filter(a=>(a.status||a.Status||'').toLowerCase()==='activa').length,
+      icon:<svg viewBox="0 0 24 24" fill="none" width="20" height="20"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="#c8a951" strokeWidth="1.5" strokeLinecap="round"/></svg> },
+    { label:'Tarjetas emitidas', value: lc ? '...' : cards.length,
+      icon:<svg viewBox="0 0 24 24" fill="none" width="20" height="20"><rect x="2" y="5" width="20" height="14" rx="2" stroke="#c8a951" strokeWidth="1.5"/><path d="M2 10h20" stroke="#c8a951" strokeWidth="1.5" strokeLinecap="round"/></svg> },
+    { label:'Préstamos activos', value: ll ? '...' : loans.length,
+      icon:<svg viewBox="0 0 24 24" fill="none" width="20" height="20"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="#c8a951" strokeWidth="1.5" strokeLinecap="round"/></svg> },
+    { label:'Total en cuentas', value: la ? '...' : 'Q ' + fmt(accounts.reduce((s,a)=>s+Number(a.balance||a.Balance||0),0)),
+      icon:<svg viewBox="0 0 24 24" fill="none" width="20" height="20"><circle cx="12" cy="12" r="10" stroke="#c8a951" strokeWidth="1.5"/><path d="M12 6v12M9 9h4.5a1.5 1.5 0 010 3H9m0 0h5.5a1.5 1.5 0 010 3H9" stroke="#c8a951" strokeWidth="1.5" strokeLinecap="round"/></svg> },
   ];
 
   return (
@@ -102,23 +112,21 @@ const OverviewSection = () => {
           </div>
         ))}
       </div>
-
-      {/* Últimas cuentas */}
       <div className="table-card" style={{marginTop:'1.5rem'}}>
         <div className="table-header"><span className="table-title">Últimas cuentas creadas</span></div>
         <table className="data-table">
           <thead><tr><th>N° Cuenta</th><th>Tipo</th><th>Balance</th><th>Estado</th><th>Fecha</th></tr></thead>
           <tbody>
-            {la ? <LoadingRows cols={5} /> : accounts.slice(0,6).map((a,i)=>(
+            {la ? <LoadingRows cols={5}/> : accounts.slice(0,6).map((a,i)=>(
               <tr key={i}>
-                <td style={{fontFamily:'monospace',color:'var(--gold-pure)'}}>{a.accountNumber||a.AccountNumber||a._id||'—'}</td>
-                <td><Badge value={a.accountType||a.AccountType||'—'}/></td>
+                <td style={{fontFamily:'monospace',color:'var(--gold-pure)'}}>{a.accountNumber||a.AccountNumber||'—'}</td>
+                <td><Badge value={a.accountType||a.AccountType}/></td>
                 <td>Q {fmt(a.balance||a.Balance)}</td>
                 <td><Badge value={a.status||a.Status}/></td>
-                <td>{fmtDate(a.openingDate||a.createdAt||a.created_at)}</td>
+                <td style={{color:'var(--muted)',fontSize:'.82rem'}}>{fmtDate(a.openingDate||a.createdAt)}</td>
               </tr>
             ))}
-            {!la && accounts.length===0 && <EmptyState text="Sin cuentas registradas" />}
+            {!la && accounts.length===0 && <EmptyState text="Sin cuentas registradas"/>}
           </tbody>
         </table>
       </div>
@@ -131,187 +139,669 @@ const OverviewSection = () => {
 ══════════════════════════════════ */
 const UsersSection = () => {
   const { data: users, loading, reload } = useData(getUsers);
-  const [search, setSearch] = useState('');
-  const [changing, setChanging] = useState(null);
+  const [localUsers, setLocalUsers] = useState([]);
+  const [search, setSearch]         = useState('');
+  const [changing, setChanging]     = useState(null);
+  const [editModal, setEditModal]   = useState(null);
 
-  const filtered = users.filter(u =>
-    `${u.Name||u.name||''} ${u.Username||u.username||''} ${u.Email||u.email||''}`.toLowerCase().includes(search.toLowerCase())
+  // Sincroniza localUsers cuando llegan datos del backend
+  useEffect(() => {
+    if (users.length > 0) setLocalUsers(users);
+  }, [users]);
+
+  const getRole = (u) =>
+    u?.role || u?.UserRoles?.[0]?.Role?.Name || u?._fetchedRole || 'USER_ROLE';
+
+  const filtered = localUsers.filter(u =>
+    `${u.name||''} ${u.surname||''} ${u.username||''} ${u.email||''}`
+      .toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleRoleChange = async (userId, currentRole) => {
-    const newRole = currentRole === 'ADMIN_ROLE' ? 'USER_ROLE' : 'ADMIN_ROLE';
-    setChanging(userId);
-    try {
-      await changeRole(userId, newRole);
-      showSuccess(`Rol cambiado a ${newRole}`);
-      reload();
-    } catch { showError('Error al cambiar el rol'); }
-    finally { setChanging(null); }
-  };
+// Email del admin principal que NO puede ser degradado
+const PROTECTED_ADMIN_EMAIL = 'proyectobancario3@gmail.com';
 
+const handleRoleChange = async (id, currentRole) => {
+  const targetUser = localUsers.find(u => u.id === id || u.Id === id);
+
+  // Protección: el admin principal no puede ser degradado
+  if (targetUser?.email === PROTECTED_ADMIN_EMAIL) {
+    showError('Este administrador principal no puede ser modificado.');
+    return;
+  }
+
+  // Protección: solo el admin principal puede cambiar roles
+  // (el usuario actual debe ser el admin principal)
+  const currentUser = useAuthStore.getState().user;
+  const currentUserInList = localUsers.find(u =>
+    u.id === currentUser?.id ||
+    u.username === currentUser?.username
+  );
+  if (currentUserInList?.email !== PROTECTED_ADMIN_EMAIL) {
+    showError('Solo el administrador principal puede cambiar roles.');
+    return;
+  }
+
+  const newRole = currentRole === 'ADMIN_ROLE' ? 'USER_ROLE' : 'ADMIN_ROLE';
+  setChanging(id);
+
+  // Actualiza localmente de inmediato
+  setLocalUsers(prev => prev.map(u =>
+    (u.id === id || u.Id === id)
+      ? { ...u, role: newRole, _fetchedRole: newRole }
+      : u
+  ));
+  if (editModal && (editModal.id === id || editModal.Id === id)) {
+    setEditModal(prev => ({ ...prev, role: newRole, _fetchedRole: newRole }));
+  }
+
+  try {
+    await changeRole(id, newRole);
+    showSuccess(`Rol cambiado a ${newRole}`);
+    clearDataCache();
+
+    // Si degradamos a alguien de ADMIN a USER,
+    // forzamos cierre de sesión en ese dispositivo
+    // (el backend invalida el token en la próxima petición)
+    if (currentRole === 'ADMIN_ROLE' && newRole === 'USER_ROLE') {
+      showSuccess('El usuario será redirigido al dashboard de cliente en su próxima acción.');
+    }
+  } catch (e) {
+    // Revierte si falla
+    setLocalUsers(prev => prev.map(u =>
+      (u.id === id || u.Id === id)
+        ? { ...u, role: currentRole, _fetchedRole: currentRole }
+        : u
+    ));
+    if (editModal && (editModal.id === id || editModal.Id === id)) {
+      setEditModal(prev => ({ ...prev, role: currentRole, _fetchedRole: currentRole }));
+    }
+    showError(e?.response?.data?.message || 'Error al cambiar el rol');
+  } finally {
+    setChanging(null);
+  }
+};
   return (
     <div>
       <div className="page-header">
-        <div><h1 className="page-title">Usuarios</h1><p className="page-subtitle">Gestión de usuarios del sistema</p></div>
+        <div>
+          <h1 className="page-title">Usuarios registrados</h1>
+          <p className="page-subtitle">Gestión y control de acceso de usuarios</p>
+        </div>
       </div>
+
       <div className="table-card">
         <div className="table-header">
-          <span className="table-title">Todos los usuarios</span>
-          <div className="table-actions">
-            <div className="search-input-wrap">
-              <span className="search-icon"><svg viewBox="0 0 24 24" fill="none" width="14" height="14"><circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.5"/><path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg></span>
-              <input className="search-input" placeholder="Buscar usuario..." value={search} onChange={e=>setSearch(e.target.value)} />
-            </div>
+          <span className="table-title">Total: {filtered.length} usuarios</span>
+          <div className="search-input-wrap">
+            <span className="search-icon">
+              <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+                <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </span>
+            <input className="search-input" placeholder="Buscar usuario..."
+              value={search} onChange={e => setSearch(e.target.value)}/>
           </div>
         </div>
+
         <table className="data-table">
-          <thead><tr><th>Nombre</th><th>Usuario</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acción</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Correo</th>
+              <th>Teléfono</th>
+              <th>Rol</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
           <tbody>
-            {loading ? <LoadingRows cols={6}/> : filtered.map((u,i)=>{
-              const id = u.Id||u.id||u._id;
-              const role = u.UserRoles?.[0]?.Role?.Name || u.role || 'USER_ROLE';
+            {loading && localUsers.length === 0
+              ? <LoadingRows cols={6}/>
+              : filtered.map((u, i) => {
+              const id        = u.id || u.Id;
+              const role      = getRole(u);
+              const avatar    = u.profilePicture;
+              const hasAvatar = avatar && !avatar.includes('default');
+              const initials  = `${(u.name||'U')[0]}${(u.surname||'')[0]||''}`.toUpperCase();
+              const isActive  = u.status === true || u.status === 1;
+
               return (
-                <tr key={i}>
-                  <td><span style={{color:'var(--white)',fontWeight:500}}>{u.Name||u.name||'—'} {u.Surname||u.surname||''}</span></td>
-                  <td style={{color:'var(--gold-pure)'}}>@{u.Username||u.username||'—'}</td>
-                  <td style={{color:'var(--muted)',fontSize:'.82rem'}}>{u.Email||u.email||'—'}</td>
-                  <td><Badge value={role}/></td>
-                  <td><Badge value={u.Status||u.status ? 'Activo':'Inactivo'}/></td>
+                <tr key={id || i}>
                   <td>
-                    <button className="btn-icon" title="Cambiar rol" disabled={changing===id}
-                      onClick={()=>handleRoleChange(id,role)}
-                      style={{width:'auto',padding:'0 10px',fontSize:'0.72rem',color:'var(--gold-pure)'}}>
-                      {changing===id ? <span className="spin"/> : role==='ADMIN_ROLE'?'→ User':'→ Admin'}
-                    </button>
+                    <div style={{ display:'flex', alignItems:'center', gap:'.75rem' }}>
+                      <div style={{
+                        width:34, height:34, borderRadius:'50%',
+                        background:'linear-gradient(135deg,#8a7035,#c8a951)',
+                        display:'flex', alignItems:'center', justifyContent:'center',
+                        fontFamily:"'Cormorant Garamond',serif",
+                        fontSize:'.85rem', fontWeight:700, color:'#060810',
+                        flexShrink:0, overflow:'hidden',
+                      }}>
+                        {hasAvatar
+                          ? <img src={avatar} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}
+                              onError={e => e.target.style.display='none'}/>
+                          : initials
+                        }
+                      </div>
+                      <div>
+                        <p style={{ color:'var(--white)', fontWeight:500, fontSize:'.88rem', lineHeight:1.2 }}>
+                          {u.name||'—'} {u.surname||''}
+                        </p>
+                        <p style={{ color:'var(--muted)', fontSize:'.75rem' }}>@{u.username||'—'}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ color:'var(--muted)', fontSize:'.82rem' }}>{u.email||'—'}</td>
+                  <td style={{ color:'var(--muted)', fontSize:'.82rem' }}>{u.phone||'—'}</td>
+                  <td><Badge value={role}/></td>
+                  <td><Badge value={isActive ? 'Activo' : 'Inactivo'}/></td>
+                  <td>
+                    <div className="action-btns">
+                      <button className="btn-icon" title="Ver detalle" onClick={() => setEditModal(u)}>
+                        <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+                          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                        </svg>
+                      </button>
+                      <button
+                        className="btn-icon"
+                        style={{ width:'auto', padding:'0 8px', fontSize:'.7rem', color:'var(--gold-pure)' }}
+                        disabled={changing === id}
+                        onClick={() => handleRoleChange(id, role)}
+                        title={role === 'ADMIN_ROLE' ? 'Quitar admin' : 'Hacer admin'}
+                      >
+                        {changing === id
+                          ? <span className="spin"/>
+                          : role === 'ADMIN_ROLE' ? '→ User' : '→ Admin'
+                        }
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
             })}
-            {!loading && filtered.length===0 && <EmptyState text="Sin usuarios encontrados"/>}
+            {!loading && filtered.length === 0 && localUsers.length === 0 &&
+              <EmptyState text="Sin usuarios registrados"/>
+            }
           </tbody>
         </table>
       </div>
+
+      {/* Modal detalle */}
+      {editModal && (
+        <div className="modal-overlay" onClick={() => setEditModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-title">Detalle del usuario</span>
+              <button className="modal-close" onClick={() => setEditModal(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ textAlign:'center', marginBottom:'1.25rem' }}>
+                <div style={{
+                  width:72, height:72, borderRadius:'50%', margin:'0 auto .75rem',
+                  background:'linear-gradient(135deg,#8a7035,#c8a951)',
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  fontFamily:"'Cormorant Garamond',serif", fontSize:'1.5rem',
+                  fontWeight:700, color:'#060810', overflow:'hidden',
+                }}>
+                  {editModal.profilePicture && !editModal.profilePicture.includes('default')
+                    ? <img src={editModal.profilePicture} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+                    : `${(editModal.name||'U')[0]}${(editModal.surname||'')[0]||''}`.toUpperCase()
+                  }
+                </div>
+                <p style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:'1.1rem', color:'var(--white)', fontWeight:600 }}>
+                  {editModal.name} {editModal.surname}
+                </p>
+                <p style={{ fontSize:'.75rem', color:'var(--muted)' }}>@{editModal.username}</p>
+              </div>
+
+              {[
+                { label:'ID',         value: editModal.id,    mono: true },
+                { label:'Correo',     value: editModal.email },
+                { label:'Teléfono',   value: editModal.phone || '—' },
+                { label:'Rol',        value: getRole(editModal) },
+                { label:'Estado',     value: editModal.status ? 'Activo' : 'Inactivo' },
+                { label:'Verificado', value: editModal.isEmailVerified ? 'Sí' : 'No' },
+                { label:'Registro',   value: editModal.createdAt ? new Date(editModal.createdAt).toLocaleDateString('es-GT') : '—' },
+              ].map(({ label, value, mono }) => (
+                <div key={label} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'.65rem 0', borderBottom:'1px solid rgba(255,255,255,0.04)' }}>
+                  <span style={{ fontSize:'.72rem', color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.08em', fontWeight:500 }}>{label}</span>
+                  <span style={{ fontSize:'.85rem', color:'var(--white)', fontFamily: mono ? 'monospace' : 'inherit' }}>{value}</span>
+                </div>
+              ))}
+
+              <div style={{ marginTop:'1rem', paddingTop:'1rem', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+                <p style={{ fontSize:'.72rem', color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.08em', marginBottom:'.75rem', fontWeight:500 }}>Cambiar rol</p>
+                <div style={{ display:'flex', gap:'.75rem' }}>
+                  {['USER_ROLE','ADMIN_ROLE'].map(r => {
+                    const current = getRole(editModal);
+                    const isActive = current === r;
+                    return (
+                      <button key={r}
+                        disabled={isActive || changing === editModal.id}
+                        onClick={() => { handleRoleChange(editModal.id, current); }}
+                        style={{
+                          flex:1, padding:'.65rem',
+                          background: isActive ? 'rgba(200,169,81,0.15)' : 'rgba(255,255,255,0.03)',
+                          border: `1px solid ${isActive ? 'rgba(200,169,81,0.35)' : 'rgba(255,255,255,0.07)'}`,
+                          color: isActive ? 'var(--gold-pure)' : 'var(--muted)',
+                          borderRadius:8, fontFamily:"'Outfit',sans-serif", fontSize:'.8rem',
+                          cursor: isActive ? 'default' : 'pointer',
+                          transition:'all .2s',
+                        }}
+                      >
+                        {r === 'ADMIN_ROLE' ? 'Administrador' : 'Cliente'}
+                        {isActive && ' ✓'}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-cancel" onClick={() => setEditModal(null)}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-
 /* ══════════════════════════════════
    SECCIÓN: Cuentas
 ══════════════════════════════════ */
 const AccountsSection = () => {
   const { data, loading, reload } = useData(getAccounts);
-  const [search, setSearch] = useState('');
-  const [modal, setModal] = useState(false);
-  const [confirm, setConfirm] = useState(null);
-  const [form, setForm] = useState({ accountType:'ahorro', balance:'', openingDate:'', status:'activa' });
-  const [saving, setSaving] = useState(false);
+  const [localData, setLocalData] = useState([]);
+  const [search, setSearch]       = useState('');
+  const [modal, setModal]         = useState(false);
+  const [editItem, setEditItem]   = useState(null);
+  const [confirm, setConfirm]     = useState(null);
+  const [saving, setSaving]       = useState(false);
+  const [detailModal, setDetailModal] = useState(null);
 
-  const filtered = data.filter(a =>
-    `${a.accountNumber||a.AccountNumber||''} ${a.accountType||a.AccountType||''} ${a.status||a.Status||''}`.toLowerCase().includes(search.toLowerCase())
+  const emptyForm = {
+    accountType: 'ahorro', balance: '', openingDate: '',
+    status: 'activa', dailyWithdrawalLimit: '', annualInterestRate: '',
+    currencyCode: 'GTQ', userId: '', dpi: '', address: '', jobName: '', monthlyIncome: '',  phone: '',
+  };
+  const [form, setForm] = useState(emptyForm);
+
+  useEffect(() => { if (data.length > 0) setLocalData(data); }, [data]);
+
+  const fmt = (n) => n != null ? Number(n).toLocaleString('es-GT', { minimumFractionDigits: 2 }) : '—';
+  const fmtDate = (d) => d ? new Date(d).toLocaleDateString('es-GT') : '—';
+
+  const filtered = localData.filter(a =>
+    `${a.accountNumber||a.AccountNumber||''} ${a.accountType||a.AccountType||''} ${a.status||a.Status||''} ${a.userId||a.UserId||''}`
+      .toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleCreate = async () => {
-    setSaving(true);
-    try {
-      await createAccount({ ...form, balance: Number(form.balance), openingDate: form.openingDate || new Date().toISOString() });
-      showSuccess('Cuenta creada'); setModal(false); reload();
-    } catch(e){ showError(e?.response?.data?.message||'Error al crear'); }
-    finally{ setSaving(false); }
+  const openCreate = () => { setForm(emptyForm); setEditItem(null); setModal(true); };
+
+  const openEdit = (a) => {
+    setForm({
+      accountType: a.accountType || a.AccountType || 'ahorro',
+      balance: a.balance || a.Balance || '',
+      openingDate: a.openingDate ? a.openingDate.slice(0,10) : '',
+      status: a.status || a.Status || 'activa',
+      dailyWithdrawalLimit: a.dailyWithdrawalLimit || a.DailyWithdrawalLimit || '',
+      annualInterestRate: a.annualInterestRate || a.AnnualInterestRate || '',
+      currencyCode: a.currencyCode || a.CurrencyCode || 'GTQ',
+      userId: a.userId || a.UserId || '',
+      dpi: a.dpi || a.Dpi || '',
+      address: a.address || a.Address || '',
+      name: a.name || a.Name || '',
+      jobName: a.jobName || a.JobName || '',
+      monthlyIncome: a.monthlyIncome || a.MonthlyIncome || '',
+    });
+    setEditItem(a);
+    setModal(true);
   };
 
-  const handleDelete = async (id) => {
-    try { await deleteAccount(id); showSuccess('Cuenta eliminada'); reload(); }
-    catch { showError('Error al eliminar'); }
+  const handleSave = async () => {
+  if (!form.userId)        { showError('El ID de usuario es obligatorio'); return; }
+  if (!form.monthlyIncome) { showError('El ingreso mensual es obligatorio'); return; }
+  if (!form.address)       { showError('La dirección es obligatoria'); return; }
+  if (!form.jobName)       { showError('La ocupación es obligatoria'); return; }
+  if (!form.currencyCode)  { showError('La moneda es obligatoria'); return; }
+  if (!form.dpi || form.dpi.length !== 13) { showError('El DPI debe tener 13 dígitos'); return; }
+  if (!form.phone || form.phone.length !== 8) { showError('El teléfono debe tener 8 dígitos'); return; }
+
+  setSaving(true);
+  try {
+    if (editItem) {
+      const accNum = editItem.accountNumber || editItem.AccountNumber;
+      await updateAccount(accNum, {
+        name:          form.name,
+        address:       form.address,
+        jobName:       form.jobName,
+        monthlyIncome: Number(form.monthlyIncome),
+      });
+      setLocalData(prev => prev.map(a =>
+        (a.accountNumber||a.AccountNumber) === accNum ? { ...a, ...form } : a
+      ));
+      showSuccess('Cuenta actualizada');
+    } else {
+      const res = await createAccount({
+        userId:               form.userId,
+        currencyCode:         form.currencyCode,
+        monthlyIncome:        Number(form.monthlyIncome),
+        address:              form.address,
+        jobName:              form.jobName,
+        phone:                form.phone,
+        dpi:                  form.dpi,
+        accountType:          form.accountType,
+        balance:              Number(form.balance) || 0,
+        openingDate:          form.openingDate ? new Date(form.openingDate).toISOString() : new Date().toISOString(),
+        status:               form.status,
+        dailyWithdrawalLimit: Number(form.dailyWithdrawalLimit) || 1000,
+        annualInterestRate:   Number(form.annualInterestRate)   || 0,
+      });
+      const newAccount = res.data?.data || res.data;
+      setLocalData(prev => [newAccount, ...prev]);
+      showSuccess('Cuenta creada exitosamente');
+    }
+    setModal(false);
+    clearDataCache();
+  } catch (e) {
+    showError(e?.response?.data?.message || e?.response?.data?.error || 'Error al guardar');
+  } finally { setSaving(false); }
+};
+
+  const handleDelete = async () => {
+    const id = confirm.accountNumber || confirm.AccountNumber || confirm._id;
+    try {
+      await deleteAccount(id);
+      setLocalData(prev => prev.filter(a => (a.accountNumber||a.AccountNumber) !== id));
+      showSuccess('Cuenta eliminada');
+    } catch (e) { showError(e?.response?.data?.message || 'Error al eliminar'); }
     setConfirm(null);
   };
+
+  const handleToggleStatus = async (a) => {
+    const id = a._id || a.id;
+    const newStatus = (a.status||a.Status) === 'activa' ? 'inactiva' : 'activa';
+    try {
+      await toggleAccountStatus(id, newStatus);
+      setLocalData(prev => prev.map(x =>
+        (x._id||x.id) === id ? { ...x, status: newStatus, Status: newStatus } : x
+      ));
+      showSuccess(`Cuenta ${newStatus}`);
+    } catch (e) { showError(e?.response?.data?.message || 'Error al cambiar estado'); }
+  };
+
+  const F = ({ label, children }) => (
+    <div className="modal-field"><label className="modal-label">{label}</label>{children}</div>
+  );
 
   return (
     <div>
       <div className="page-header">
-        <div><h1 className="page-title">Cuentas</h1><p className="page-subtitle">Administración de cuentas bancarias</p></div>
-        <button className="btn-add" onClick={()=>setModal(true)}>
+        <div><h1 className="page-title">Cuentas</h1><p className="page-subtitle">Gestión completa de cuentas bancarias</p></div>
+        <button className="btn-add" onClick={openCreate}>
           <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
           Nueva cuenta
         </button>
       </div>
 
+      {/* Stats rápidas */}
+      <div className="stats-grid" style={{ marginBottom:'1.25rem' }}>
+        {[
+          { label:'Total cuentas', value: localData.length },
+          { label:'Activas', value: localData.filter(a=>(a.status||a.Status||'').toLowerCase()==='activa').length },
+          { label:'Inactivas', value: localData.filter(a=>(a.status||a.Status||'').toLowerCase()!=='activa').length },
+          { label:'Balance total', value: 'Q ' + fmt(localData.reduce((s,a)=>s+Number(a.balance||a.Balance||0),0)) },
+        ].map((s,i) => (
+          <div key={i} className="stat-card">
+            <div className="stat-card-value" style={{fontSize:'1.4rem'}}>{s.value}</div>
+            <div className="stat-card-label">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
       <div className="table-card">
         <div className="table-header">
-          <span className="table-title">Todas las cuentas</span>
-          <div className="search-input-wrap">
-            <span className="search-icon"><svg viewBox="0 0 24 24" fill="none" width="14" height="14"><circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.5"/><path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg></span>
-            <input className="search-input" placeholder="Buscar..." value={search} onChange={e=>setSearch(e.target.value)}/>
+          <span className="table-title">Todas las cuentas ({filtered.length})</span>
+          <div style={{display:'flex',gap:'.75rem',alignItems:'center'}}>
+            <div className="search-input-wrap">
+              <span className="search-icon"><svg viewBox="0 0 24 24" fill="none" width="14" height="14"><circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.5"/><path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg></span>
+              <input className="search-input" placeholder="Buscar cuenta..." value={search} onChange={e=>setSearch(e.target.value)}/>
+            </div>
+            <button className="btn-secondary" onClick={()=>{clearDataCache();reload();}}>
+              <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              Actualizar
+            </button>
           </div>
         </div>
+
         <table className="data-table">
-          <thead><tr><th>N° Cuenta</th><th>Tipo</th><th>Balance</th><th>Estado</th><th>Apertura</th><th>Acciones</th></tr></thead>
+          <thead>
+            <tr><th>N° Cuenta</th><th>Tipo</th><th>Usuario</th><th>Balance</th><th>Moneda</th><th>Estado</th><th>Apertura</th><th>Acciones</th></tr>
+          </thead>
           <tbody>
-            {loading ? <LoadingRows cols={6}/> : filtered.map((a,i)=>{
-              const id = a._id||a.id||a.accountNumber||a.AccountNumber;
+            {loading && localData.length===0 ? <LoadingRows cols={8}/> : filtered.map((a,i) => {
+              const accNum = a.accountNumber || a.AccountNumber || '—';
+              const status = (a.status || a.Status || '').toLowerCase();
               return (
-                <tr key={i}>
-                  <td style={{fontFamily:'monospace',color:'var(--gold-pure)'}}>{a.accountNumber||a.AccountNumber||'—'}</td>
+                <tr key={accNum+i}>
+                  <td style={{fontFamily:'monospace',color:'var(--gold-pure)',fontSize:'.85rem'}}>{accNum}</td>
                   <td><Badge value={a.accountType||a.AccountType}/></td>
+                  <td style={{color:'var(--muted)',fontSize:'.8rem'}}>{a.userId||a.UserId||'—'}</td>
                   <td style={{fontWeight:500,color:'var(--white)'}}>Q {fmt(a.balance||a.Balance)}</td>
-                  <td><Badge value={a.status||a.Status}/></td>
-                  <td style={{color:'var(--muted)',fontSize:'.82rem'}}>{fmtDate(a.openingDate||a.createdAt)}</td>
-                  <td><div className="action-btns">
-                    <button className="btn-icon danger" title="Eliminar" onClick={()=>setConfirm({id,label:a.accountNumber||a.AccountNumber})}>
-                      <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    </button>
-                  </div></td>
+                  <td style={{color:'var(--muted)',fontSize:'.8rem'}}>{a.currencyCode||a.CurrencyCode||'GTQ'}</td>
+                  <td><Badge value={a.status||a.Status||'—'}/></td>
+                  <td style={{color:'var(--muted)',fontSize:'.8rem'}}>{fmtDate(a.openingDate||a.createdAt)}</td>
+                  <td>
+                    <div className="action-btns">
+                      {/* Ver detalle */}
+                      <button className="btn-icon" title="Ver detalle" onClick={()=>setDetailModal(a)}>
+                        <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5"/><path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                      </button>
+                      {/* Editar */}
+                      <button className="btn-icon" title="Editar" onClick={()=>openEdit(a)}>
+                        <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                      </button>
+                      {/* Toggle estado */}
+                      <button className="btn-icon" title={status==='activa'?'Desactivar':'Activar'} onClick={()=>handleToggleStatus(a)}>
+                        {status==='activa'
+                          ? <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M18.36 6.64A9 9 0 015.64 19.36M6.34 6.34A9 9 0 0019 17.65M1 1l22 22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                          : <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="#4caf7d" strokeWidth="1.5" strokeLinecap="round"/><path d="M22 4L12 14.01l-3-3" stroke="#4caf7d" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                        }
+                      </button>
+                      {/* Eliminar */}
+                      <button className="btn-icon danger" title="Eliminar" onClick={()=>setConfirm(a)}>
+                        <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               );
             })}
-            {!loading && filtered.length===0 && <EmptyState text="Sin cuentas"/>}
+            {!loading && filtered.length===0 && <EmptyState text="Sin cuentas registradas"/>}
           </tbody>
         </table>
       </div>
 
+      {/* Modal Crear / Editar */}
       {modal && (
         <div className="modal-overlay" onClick={()=>setModal(false)}>
-          <div className="modal" onClick={e=>e.stopPropagation()}>
+          <div className="modal" style={{maxWidth:560}} onClick={e=>e.stopPropagation()}>
             <div className="modal-header">
-              <span className="modal-title">Nueva Cuenta</span>
+              <span className="modal-title">{editItem ? 'Editar cuenta' : 'Nueva cuenta'}</span>
               <button className="modal-close" onClick={()=>setModal(false)}>✕</button>
             </div>
             <div className="modal-body">
-              <div className="modal-fields-row">
-                <div className="modal-field">
-                  <label className="modal-label">Tipo</label>
-                  <select className="modal-select" value={form.accountType} onChange={e=>setForm(p=>({...p,accountType:e.target.value}))}>
-                    <option value="ahorro">Ahorro</option>
-                    <option value="corriente">Corriente</option>
-                    <option value="monetaria">Monetaria</option>
-                  </select>
-                </div>
-                <div className="modal-field">
-                  <label className="modal-label">Balance inicial</label>
-                  <input className="modal-input" type="number" placeholder="0.00" value={form.balance} onChange={e=>setForm(p=>({...p,balance:e.target.value}))}/>
-                </div>
-              </div>
-              <div className="modal-fields-row">
-                <div className="modal-field">
-                  <label className="modal-label">Fecha apertura</label>
-                  <input className="modal-input" type="date" value={form.openingDate} onChange={e=>setForm(p=>({...p,openingDate:e.target.value}))}/>
-                </div>
-                <div className="modal-field">
-                  <label className="modal-label">Estado</label>
-                  <select className="modal-select" value={form.status} onChange={e=>setForm(p=>({...p,status:e.target.value}))}>
-                    <option value="activa">Activa</option>
-                    <option value="inactiva">Inactiva</option>
-                  </select>
-                </div>
-              </div>
+              {!editItem && (
+  <>
+    <div className="modal-fields-row">
+      <F label="ID de usuario *">
+        <input className="modal-input" placeholder="usr_XXXX" value={form.userId}
+          onChange={e=>setForm(p=>({...p,userId:e.target.value}))}/>
+      </F>
+      <F label="Moneda *">
+        <select className="modal-select" value={form.currencyCode}
+          onChange={e=>setForm(p=>({...p,currencyCode:e.target.value}))}>
+          <option value="GTQ">GTQ — Quetzal</option>
+          <option value="USD">USD — Dólar</option>
+          <option value="EUR">EUR — Euro</option>
+        </select>
+      </F>
+    </div>
+
+    <div className="modal-fields-row">
+      <F label="Ocupación *">
+        <input className="modal-input" placeholder="Ingeniero, Comerciante..." value={form.jobName||''}
+          onChange={e=>setForm(p=>({...p,jobName:e.target.value}))}/>
+      </F>
+      <F label="Ingreso mensual (Q) *">
+        <input className="modal-input" type="number" placeholder="5000" value={form.monthlyIncome||''}
+          onChange={e=>setForm(p=>({...p,monthlyIncome:e.target.value}))}/>
+      </F>
+    </div>
+
+    <F label="Dirección *">
+      <input className="modal-input" placeholder="Zona 10, Ciudad de Guatemala" value={form.address||''}
+        onChange={e=>setForm(p=>({...p,address:e.target.value}))}/>
+    </F>
+
+    <div className="modal-fields-row">
+      <F label="DPI (13 dígitos) *">
+        <input className="modal-input" placeholder="1234567890123" maxLength={13} value={form.dpi||''}
+          onChange={e=>setForm(p=>({...p,dpi:e.target.value.replace(/\D/g,'')}))}/>
+      </F>
+      <F label="Teléfono (8 dígitos) *">
+        <input className="modal-input" placeholder="55123456" maxLength={8} value={form.phone||''}
+          onChange={e=>setForm(p=>({...p,phone:e.target.value.replace(/\D/g,'')}))}/>
+      </F>
+    </div>
+
+    <div className="modal-fields-row">
+      <F label="Tipo de cuenta">
+        <select className="modal-select" value={form.accountType}
+          onChange={e=>setForm(p=>({...p,accountType:e.target.value}))}>
+          <option value="ahorro">Ahorro</option>
+          <option value="corriente">Corriente</option>
+          <option value="nomina">Nómina</option>
+        </select>
+      </F>
+      <F label="Balance inicial">
+        <input className="modal-input" type="number" placeholder="0.00" value={form.balance||''}
+          onChange={e=>setForm(p=>({...p,balance:e.target.value}))}/>
+      </F>
+    </div>
+
+    <div className="modal-fields-row">
+      <F label="Límite retiro diario">
+        <input className="modal-input" type="number" placeholder="1000" value={form.dailyWithdrawalLimit||''}
+          onChange={e=>setForm(p=>({...p,dailyWithdrawalLimit:e.target.value}))}/>
+      </F>
+      <F label="Tasa interés anual (%)">
+        <input className="modal-input" type="number" placeholder="4.5" value={form.annualInterestRate||''}
+          onChange={e=>setForm(p=>({...p,annualInterestRate:e.target.value}))}/>
+      </F>
+    </div>
+
+    <div className="modal-fields-row">
+      <F label="Fecha apertura">
+        <input className="modal-input" type="date" value={form.openingDate||''}
+          onChange={e=>setForm(p=>({...p,openingDate:e.target.value}))}/>
+      </F>
+      <F label="Estado inicial">
+        <select className="modal-select" value={form.status}
+          onChange={e=>setForm(p=>({...p,status:e.target.value}))}>
+          <option value="activa">Activa</option>
+          <option value="inactiva">Inactiva</option>
+        </select>
+      </F>
+    </div>
+
+    <div style={{background:'rgba(224,92,92,0.06)',border:'1px solid rgba(224,92,92,0.15)',borderRadius:8,padding:'.85rem 1rem',fontSize:'.78rem',color:'rgba(224,92,92,0.8)',lineHeight:1.5}}>
+      ⚠️ Antes de crear cuentas cambia <strong>auth-service:3005</strong> por <strong>localhost:3005</strong> en <strong>accounts.controller.js</strong> del Banking-Service.
+    </div>
+  </>
+)}
+
+              {editItem && (
+                <>
+                  <div style={{background:'rgba(200,169,81,0.05)',border:'1px solid rgba(200,169,81,0.12)',borderRadius:8,padding:'.85rem 1rem',marginBottom:'.5rem',fontSize:'.82rem',color:'var(--gold-bright)'}}>
+                    Cuenta: <strong style={{fontFamily:'monospace'}}>{editItem.accountNumber||editItem.AccountNumber}</strong>
+                  </div>
+                  <div className="modal-fields-row">
+                    <F label="Nombre titular">
+                      <input className="modal-input" placeholder="Juan" value={form.name||''}
+                        onChange={e=>setForm(p=>({...p,name:e.target.value}))}/>
+                    </F>
+                    <F label="Ocupación">
+                      <input className="modal-input" placeholder="Desarrollador" value={form.jobName||''}
+                        onChange={e=>setForm(p=>({...p,jobName:e.target.value}))}/>
+                    </F>
+                  </div>
+                  <F label="Dirección">
+                    <input className="modal-input" placeholder="Zona 1, Ciudad de Guatemala" value={form.address||''}
+                      onChange={e=>setForm(p=>({...p,address:e.target.value}))}/>
+                  </F>
+                  <F label="Ingreso mensual (Q)">
+                    <input className="modal-input" type="number" placeholder="5000" value={form.monthlyIncome||''}
+                      onChange={e=>setForm(p=>({...p,monthlyIncome:e.target.value}))}/>
+                  </F>
+                </>
+              )}
             </div>
             <div className="modal-footer">
               <button className="btn-cancel" onClick={()=>setModal(false)}>Cancelar</button>
-              <button className="btn-save" onClick={handleCreate} disabled={saving}>{saving?<span className="spin"/>:'Crear cuenta'}</button>
+              <button className="btn-save" onClick={handleSave} disabled={saving}>
+                {saving ? <span className="spin"/> : editItem ? 'Actualizar' : 'Crear cuenta'}
+              </button>
             </div>
           </div>
         </div>
       )}
-      <ConfirmModal open={!!confirm} title="Eliminar cuenta" message={`¿Eliminar la cuenta ${confirm?.label}? Esta acción no se puede deshacer.`} onConfirm={()=>handleDelete(confirm.id)} onCancel={()=>setConfirm(null)}/>
+
+      {/* Modal detalle */}
+      {detailModal && (
+        <div className="modal-overlay" onClick={()=>setDetailModal(null)}>
+          <div className="modal" style={{maxWidth:500}} onClick={e=>e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-title">Detalle de cuenta</span>
+              <button className="modal-close" onClick={()=>setDetailModal(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              {[
+                { label:'N° Cuenta',    value: detailModal.accountNumber||detailModal.AccountNumber, mono:true },
+                { label:'Tipo',         value: detailModal.accountType||detailModal.AccountType },
+                { label:'Balance',      value: 'Q ' + fmt(detailModal.balance||detailModal.Balance) },
+                { label:'Moneda',       value: detailModal.currencyCode||detailModal.CurrencyCode||'GTQ' },
+                { label:'Estado',       value: detailModal.status||detailModal.Status },
+                { label:'Usuario',      value: detailModal.userId||detailModal.UserId, mono:true },
+                { label:'DPI',          value: detailModal.dpi||detailModal.Dpi||'—' },
+                { label:'Retiro diario',value: 'Q ' + fmt(detailModal.dailyWithdrawalLimit||detailModal.DailyWithdrawalLimit||0) },
+                { label:'Tasa interés', value: (detailModal.annualInterestRate||detailModal.AnnualInterestRate||0) + '%' },
+                { label:'Dirección',    value: detailModal.address||detailModal.Address||'—' },
+                { label:'Apertura',     value: fmtDate(detailModal.openingDate||detailModal.createdAt) },
+              ].map(({ label, value, mono }) => (
+                <div key={label} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'.65rem 0',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
+                  <span style={{fontSize:'.72rem',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.08em',fontWeight:500}}>{label}</span>
+                  <span style={{fontSize:'.85rem',color:'var(--white)',fontFamily:mono?'monospace':'inherit',maxWidth:220,textAlign:'right'}}>{value||'—'}</span>
+                </div>
+              ))}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-cancel" onClick={()=>setDetailModal(null)}>Cerrar</button>
+              <button className="btn-save" onClick={()=>{setDetailModal(null);openEdit(detailModal);}}>Editar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmModal
+        open={!!confirm}
+        title="Eliminar cuenta"
+        message={`¿Eliminar la cuenta ${confirm?.accountNumber||confirm?.AccountNumber}? Esta acción no se puede deshacer.`}
+        onConfirm={handleDelete}
+        onCancel={()=>setConfirm(null)}
+      />
     </div>
   );
 };
@@ -613,37 +1103,257 @@ const CoinsSection = () => {
 ══════════════════════════════════ */
 const LocksSection = () => {
   const { data, loading, reload } = useData(getAccountLocks);
-  const [confirm, setConfirm] = useState(null);
+  const [localData, setLocalData] = useState([]);
+  const [search, setSearch]       = useState('');
+  const [modal, setModal]         = useState(false);
+  const [editItem, setEditItem]   = useState(null);
+  const [confirm, setConfirm]     = useState(null);
+  const [saving, setSaving]       = useState(false);
+
+  const emptyForm = {
+    accountId:'', userId:'', lockReason:'seguridad',
+    description:'', lockDate:'', unlockDate:'',
+    lockedBy:'', status:'bloqueado',
+  };
+  const [form, setForm] = useState(emptyForm);
+
+  useEffect(() => { if (data.length > 0) setLocalData(data); }, [data]);
+
+  const fmtDate = (d) => d ? new Date(d).toLocaleDateString('es-GT') : '—';
+
+  const filtered = localData.filter(l =>
+    `${l.accountId||l.AccountId||''} ${l.userId||l.UserId||''} ${l.lockReason||l.LockReason||''} ${l.status||l.Status||''}`
+      .toLowerCase().includes(search.toLowerCase())
+  );
+
+  const openCreate = () => { setForm(emptyForm); setEditItem(null); setModal(true); };
+
+  const openEdit = (l) => {
+    setForm({
+      accountId:   l.accountId   || l.AccountId   || '',
+      userId:      l.userId      || l.UserId       || '',
+      lockReason:  l.lockReason  || l.LockReason   || 'seguridad',
+      description: l.description || l.Description  || '',
+      lockDate:    l.lockDate    || l.LockDate      ? (l.lockDate||l.LockDate).slice(0,16) : '',
+      unlockDate:  l.unlockDate  || l.UnlockDate    ? (l.unlockDate||l.UnlockDate||'').slice(0,16) : '',
+      lockedBy:    l.lockedBy    || l.LockedBy      || '',
+      status:      l.status      || l.Status        || 'bloqueado',
+    });
+    setEditItem(l);
+    setModal(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.accountId || !form.userId) {
+      showError('ID de cuenta e ID de usuario son obligatorios'); return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        accountId:   form.accountId,
+        userId:      form.userId,
+        lockReason:  form.lockReason,
+        description: form.description,
+        lockDate:    form.lockDate || new Date().toISOString(),
+        unlockDate:  form.unlockDate || null,
+        lockedBy:    form.lockedBy || form.userId,
+        unlockedBy:  null,
+        status:      form.status,
+      };
+
+      if (editItem) {
+        const id = editItem._id || editItem.id;
+        await updateAccountLock(id, { ...payload, unlockedBy: editItem.unlockedBy });
+        setLocalData(prev => prev.map(l =>
+          (l._id||l.id) === id ? { ...l, ...payload } : l
+        ));
+        showSuccess('Bloqueo actualizado');
+      } else {
+        const res = await createAccountLock(payload);
+        const newLock = res.data?.data || res.data;
+        setLocalData(prev => [newLock, ...prev]);
+        showSuccess('Bloqueo creado exitosamente');
+      }
+      setModal(false);
+      clearDataCache();
+    } catch (e) { showError(e?.response?.data?.message || 'Error al guardar'); }
+    finally { setSaving(false); }
+  };
+
+  const handleDelete = async () => {
+    const id = confirm._id || confirm.id;
+    try {
+      await deleteAccountLock(id);
+      setLocalData(prev => prev.filter(l => (l._id||l.id) !== id));
+      showSuccess('Bloqueo eliminado — cuenta desbloqueada');
+    } catch (e) { showError(e?.response?.data?.message || 'Error al eliminar'); }
+    setConfirm(null);
+  };
+
+  const F = ({ label, children }) => (
+    <div className="modal-field"><label className="modal-label">{label}</label>{children}</div>
+  );
+
+  const lockReasons = ['seguridad','fraude','solicitud_cliente','deuda','inactividad','otro'];
+
   return (
     <div>
-      <div className="page-header"><div><h1 className="page-title">Cuentas Bloqueadas</h1><p className="page-subtitle">Registro de bloqueos de cuentas</p></div></div>
+      <div className="page-header">
+        <div><h1 className="page-title">Cuentas Bloqueadas</h1><p className="page-subtitle">Gestión de bloqueos y restricciones de cuentas</p></div>
+        <button className="btn-add" onClick={openCreate}>
+          <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+          Nuevo bloqueo
+        </button>
+      </div>
+
+      {/* Stats */}
+      <div className="stats-grid" style={{marginBottom:'1.25rem'}}>
+        {[
+          { label:'Total bloqueos', value: localData.length },
+          { label:'Por seguridad', value: localData.filter(l=>(l.lockReason||l.LockReason||'').toLowerCase()==='seguridad').length },
+          { label:'Por fraude', value: localData.filter(l=>(l.lockReason||l.LockReason||'').toLowerCase()==='fraude').length },
+          { label:'Otros motivos', value: localData.filter(l=>!['seguridad','fraude'].includes((l.lockReason||l.LockReason||'').toLowerCase())).length },
+        ].map((s,i) => (
+          <div key={i} className="stat-card">
+            <div className="stat-card-value" style={{fontSize:'1.4rem'}}>{s.value}</div>
+            <div className="stat-card-label">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
       <div className="table-card">
-        <div className="table-header"><span className="table-title">Bloqueos activos</span></div>
+        <div className="table-header">
+          <span className="table-title">Bloqueos activos ({filtered.length})</span>
+          <div style={{display:'flex',gap:'.75rem',alignItems:'center'}}>
+            <div className="search-input-wrap">
+              <span className="search-icon"><svg viewBox="0 0 24 24" fill="none" width="14" height="14"><circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="1.5"/><path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg></span>
+              <input className="search-input" placeholder="Buscar bloqueo..." value={search} onChange={e=>setSearch(e.target.value)}/>
+            </div>
+            <button className="btn-secondary" onClick={()=>{clearDataCache();reload();}}>
+              <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              Actualizar
+            </button>
+          </div>
+        </div>
+
         <table className="data-table">
-          <thead><tr><th>Cuenta</th><th>Usuario</th><th>Razón</th><th>Descripción</th><th>Fecha</th><th>Acciones</th></tr></thead>
+          <thead>
+            <tr><th>Cuenta</th><th>Usuario</th><th>Motivo</th><th>Descripción</th><th>Bloqueado por</th><th>Fecha bloqueo</th><th>Estado</th><th>Acciones</th></tr>
+          </thead>
           <tbody>
-            {loading ? <LoadingRows cols={6}/> : data.map((l,i)=>{
-              const id = l._id||l.id;
-              return (
-                <tr key={i}>
-                  <td style={{fontFamily:'monospace',color:'var(--gold-pure)'}}>{l.accountId||l.AccountId||'—'}</td>
-                  <td style={{fontSize:'.82rem',color:'var(--muted)'}}>{l.userId||l.UserId||'—'}</td>
-                  <td><Badge value={l.lockReason||l.LockReason}/></td>
-                  <td style={{color:'var(--muted)',fontSize:'.82rem',maxWidth:200}}>{l.description||l.Description||'—'}</td>
-                  <td style={{color:'var(--muted)',fontSize:'.82rem'}}>{fmtDate(l.createdAt||l.created_at)}</td>
-                  <td><div className="action-btns">
-                    <button className="btn-icon danger" onClick={()=>setConfirm({id})}>
+            {loading && localData.length===0 ? <LoadingRows cols={8}/> : filtered.map((l,i) => (
+              <tr key={l._id||l.id||i}>
+                <td style={{fontFamily:'monospace',color:'var(--gold-pure)',fontSize:'.85rem'}}>{l.accountId||l.AccountId||'—'}</td>
+                <td style={{color:'var(--muted)',fontSize:'.8rem'}}>{l.userId||l.UserId||'—'}</td>
+                <td><Badge value={l.lockReason||l.LockReason}/></td>
+                <td style={{color:'var(--muted)',fontSize:'.8rem',maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.description||l.Description||'—'}</td>
+                <td style={{color:'var(--muted)',fontSize:'.8rem'}}>{l.lockedBy||l.LockedBy||'—'}</td>
+                <td style={{color:'var(--muted)',fontSize:'.8rem'}}>{fmtDate(l.lockDate||l.LockDate||l.createdAt)}</td>
+                <td><Badge value={l.status||l.Status||'bloqueado'}/></td>
+                <td>
+                  <div className="action-btns">
+                    <button className="btn-icon" title="Editar" onClick={()=>openEdit(l)}>
+                      <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                    </button>
+                    <button className="btn-icon danger" title="Eliminar / Desbloquear" onClick={()=>setConfirm(l)}>
                       <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </button>
-                  </div></td>
-                </tr>
-              );
-            })}
-            {!loading && data.length===0 && <EmptyState text="Sin cuentas bloqueadas"/>}
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {!loading && filtered.length===0 && <EmptyState text="Sin bloqueos registrados"/>}
           </tbody>
         </table>
       </div>
-      <ConfirmModal open={!!confirm} title="Desbloquear cuenta" message="¿Eliminar este bloqueo?" onConfirm={async()=>{try{await deleteAccountLock(confirm.id);showSuccess('Bloqueo eliminado');reload();}catch{showError('Error');}setConfirm(null);}} onCancel={()=>setConfirm(null)}/>
+
+      {/* Modal Crear / Editar */}
+      {modal && (
+        <div className="modal-overlay" onClick={()=>setModal(false)}>
+          <div className="modal" style={{maxWidth:540}} onClick={e=>e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-title">{editItem ? 'Editar bloqueo' : 'Nuevo bloqueo'}</span>
+              <button className="modal-close" onClick={()=>setModal(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div className="modal-fields-row">
+                <F label="N° de cuenta">
+                  <input className="modal-input" placeholder="ACC-000-0000" value={form.accountId}
+                    onChange={e=>setForm(p=>({...p,accountId:e.target.value}))}/>
+                </F>
+                <F label="ID de usuario">
+                  <input className="modal-input" placeholder="usr_XXXX" value={form.userId}
+                    onChange={e=>setForm(p=>({...p,userId:e.target.value}))}/>
+                </F>
+              </div>
+
+              <div className="modal-fields-row">
+                <F label="Motivo del bloqueo">
+                  <select className="modal-select" value={form.lockReason}
+                    onChange={e=>setForm(p=>({...p,lockReason:e.target.value}))}>
+                    {lockReasons.map(r => (
+                      <option key={r} value={r}>{r.replace('_',' ')}</option>
+                    ))}
+                  </select>
+                </F>
+                <F label="Estado">
+                  <select className="modal-select" value={form.status}
+                    onChange={e=>setForm(p=>({...p,status:e.target.value}))}>
+                    <option value="bloqueado">Bloqueado</option>
+                    <option value="desbloqueado">Desbloqueado</option>
+                  </select>
+                </F>
+              </div>
+
+              <F label="Descripción">
+                <input className="modal-input" placeholder="Describe el motivo del bloqueo..."
+                  value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))}/>
+              </F>
+
+              <div className="modal-fields-row">
+                <F label="Fecha de bloqueo">
+                  <input className="modal-input" type="datetime-local" value={form.lockDate}
+                    onChange={e=>setForm(p=>({...p,lockDate:e.target.value}))}/>
+                </F>
+                <F label="Fecha de desbloqueo">
+                  <input className="modal-input" type="datetime-local" value={form.unlockDate}
+                    onChange={e=>setForm(p=>({...p,unlockDate:e.target.value}))}/>
+                </F>
+              </div>
+
+              <F label="Bloqueado por (ID usuario admin)">
+                <input className="modal-input" placeholder="usr_XXXX" value={form.lockedBy}
+                  onChange={e=>setForm(p=>({...p,lockedBy:e.target.value}))}/>
+              </F>
+
+              {/* Aviso */}
+              <div style={{background:'rgba(224,92,92,0.06)',border:'1px solid rgba(224,92,92,0.15)',borderRadius:8,padding:'.85rem 1rem',display:'flex',gap:'.6rem',alignItems:'flex-start'}}>
+                <svg viewBox="0 0 24 24" fill="none" width="15" height="15" style={{flexShrink:0,marginTop:1}}>
+                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#e05c5c" strokeWidth="1.5" strokeLinecap="round"/>
+                  <path d="M12 9v4M12 17h.01" stroke="#e05c5c" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                <p style={{fontSize:'.78rem',color:'rgba(224,92,92,0.8)',lineHeight:1.5,margin:0}}>
+                  Al bloquear una cuenta el usuario no podrá realizar operaciones hasta que se elimine el bloqueo.
+                </p>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-cancel" onClick={()=>setModal(false)}>Cancelar</button>
+              <button className="btn-save" onClick={handleSave} disabled={saving}>
+                {saving ? <span className="spin"/> : editItem ? 'Actualizar bloqueo' : 'Crear bloqueo'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmModal
+        open={!!confirm}
+        title="Eliminar bloqueo"
+        message={`¿Desbloquear la cuenta ${confirm?.accountId||confirm?.AccountId}? El usuario podrá operar nuevamente.`}
+        onConfirm={handleDelete}
+        onCancel={()=>setConfirm(null)}
+      />
     </div>
   );
 };
@@ -839,9 +1549,6 @@ const SECTIONS = {
   statements: StatementsSection,
   profile: ProfilePage,
 };
-
-import { getAccountStatements } from '../../../shared/api/banking';
-import { createDeposit } from '../../../shared/api/banking';
 
 const AdminDashboard = () => {
   const [page, setPage] = useState('overview');
