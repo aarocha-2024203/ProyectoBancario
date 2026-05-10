@@ -1,65 +1,70 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-// Caché simple en memoria para evitar peticiones duplicadas
 const cache = new Map();
-const CACHE_TTL = 30000; // 30 segundos
+const TTL = 90_000; // 90 segundos
 
-const getCacheKey = (fn) => fn.toString().slice(0, 100);
+export const clearDataCache = () => cache.clear();
 
 export const useData = (fetchFn, deps = []) => {
   const [data, setData]       = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
   const mountedRef            = useRef(true);
-  const loadingRef            = useRef(false);
+  const fetchingRef           = useRef(false);
+  const keyRef                = useRef(fetchFn.toString().slice(0, 80));
 
   const normalize = (d) => {
-    if (!d) return [];
-    const items =
-      d?.data         ?? d?.items        ?? d?.coins    ??
-      d?.accounts     ?? d?.cards        ?? d?.loans    ??
-      d?.transactions ?? d?.accountLocks ?? d?.services ??
-      (Array.isArray(d) ? d : []);
-    return Array.isArray(items) ? items : [];
+    if (Array.isArray(d)) return d;
+    if (!d || typeof d !== 'object') return [];
+    for (const k of ['data','items','coins','accounts','cards','loans',
+                      'transactions','accountLocks','services','users']) {
+      if (Array.isArray(d[k]) && d[k].length >= 0) return d[k];
+    }
+    return [];
   };
 
-  const load = useCallback(async () => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    setLoading(true);
-    setError(null);
+  const load = useCallback(async (force = false) => {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
 
-    // Revisa caché
-    const key = getCacheKey(fetchFn);
-    const cached = cache.get(key);
-    if (cached && Date.now() - cached.ts < CACHE_TTL) {
-      if (mountedRef.current) {
-        setData(cached.data);
-        setLoading(false);
-      }
-      loadingRef.current = false;
+    const key = keyRef.current;
+    const hit = cache.get(key);
+
+    // Solo usa caché si tiene datos reales (length > 0) o force=false
+    if (!force && hit && Date.now() - hit.ts < TTL && hit.data.length > 0) {
+      if (mountedRef.current) { setData(hit.data); setLoading(false); }
+      fetchingRef.current = false;
       return;
     }
+
+    setLoading(true);
+    setError(null);
 
     try {
       const res = await fetchFn();
       if (!mountedRef.current) return;
-      const items = normalize(res?.data);
-      cache.set(key, { data: items, ts: Date.now() });
+      const raw   = res?.data;
+      const items = normalize(raw);
+      // Solo cachea si tiene datos
+      if (items.length > 0) {
+        cache.set(key, { data: items, ts: Date.now() });
+      }
       setData(items);
     } catch (e) {
       if (!mountedRef.current) return;
-      const status = e?.response?.status;
-      if (status === 429) {
-        setError('Demasiadas peticiones. Espera unos segundos y recarga.');
-      } else if (status === 0 || e?.code === 'ERR_NETWORK') {
-        setError('Servicio no disponible. Verifica que el servidor esté corriendo.');
+      if (e?.response?.status === 429) {
+        const old = cache.get(key);
+        if (old && old.data.length > 0) {
+          setData(old.data);
+        } else {
+          setError('Límite de peticiones. Espera 1 minuto y recarga.');
+        }
       } else {
-        setError(e?.response?.data?.message || 'Error al cargar datos');
+        setError(e?.response?.data?.message || 'Error al cargar');
       }
     } finally {
       if (mountedRef.current) setLoading(false);
-      loadingRef.current = false;
+      fetchingRef.current = false;
     }
   }, deps);
 
@@ -70,14 +75,9 @@ export const useData = (fetchFn, deps = []) => {
   }, [load]);
 
   const reload = useCallback(() => {
-    // Invalida caché al recargar manualmente
-    const key = getCacheKey(fetchFn);
-    cache.delete(key);
-    load();
-  }, [fetchFn, load]);
+    cache.delete(keyRef.current);
+    load(true);
+  }, [load]);
 
   return { data, loading, error, reload, setData };
 };
-
-// Limpia toda la caché (útil al hacer logout)
-export const clearDataCache = () => cache.clear();
