@@ -43,3 +43,9 @@ export const updateProfile = (id, data) =>
 // GET /users/ — listar todos los usuarios (admin)
 export const getAllUsers = () =>
   api.get('/users/');
+
+// POST /auth/profile/picture — subir foto de perfil a Cloudinary
+export const uploadProfilePicture = (formData) =>
+  api.post('/auth/profile/picture', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
