@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import DashboardLayout from '../../../shared/components/layout/DashboardLayout';
 import { useData } from '../../../shared/hooks/useData';
 import { showSuccess, showError } from '../../../shared/utils/toast';
 import {
   getAccounts, getCards, getTransactions, getLoans,
-  getAccountStatements, createTransaction, createWithdrawal, createDeposit,
+  getAccountStatements, createTransaction, createWithdrawal, createDeposit, getAccountsByUser,
 } from '../../../shared/api/banking';
 import useAuthStore from '../../auth/store/authStore';
 import ProfilePage from '../../profile/ProfilePage';
@@ -38,8 +38,26 @@ const UserOverview = () => {
   const {data:cards,loading:lc}=useData(getCards);
   const {data:loans,loading:ll}=useData(getLoans);
   const {data:transactions,loading:lt}=useData(getTransactions);
-  const totalBalance=accounts.reduce((s,a)=>s+Number(a.balance||a.Balance||0),0);
-  return(
+
+  // Cuentas propias del usuario
+  const [myAccounts, setMyAccounts] = useState([]);
+  const [loadingMyAcc, setLoadingMyAcc] = useState(true);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    getAccountsByUser(user.id)
+      .then(res => {
+        const d = res.data?.data || res.data || [];
+        setMyAccounts(Array.isArray(d) ? d : []);
+      })
+      .catch(() => setMyAccounts([]))
+      .finally(() => setLoadingMyAcc(false));
+  }, [user?.id]);
+
+  const myBalance = myAccounts.reduce((s,a) => s + Number(a.balance||0), 0);
+  const totalBalance = accounts.reduce((s,a)=>s+Number(a.balance||a.Balance||0),0);
+
+  return (
     <div>
       <div className="page-header">
         <div>
@@ -48,28 +66,137 @@ const UserOverview = () => {
         </div>
       </div>
 
-      {/* Balance destacado */}
+      {/* Balance destacado — usa el balance real del usuario */}
       <div style={{background:'linear-gradient(135deg,rgba(200,169,81,0.1),rgba(200,169,81,0.04))',border:'1px solid rgba(200,169,81,0.2)',borderRadius:20,padding:'2rem',marginBottom:'1.5rem',position:'relative',overflow:'hidden'}}>
         <div style={{position:'absolute',top:0,right:0,width:200,height:200,background:'radial-gradient(circle,rgba(200,169,81,0.06) 0%,transparent 70%)',borderRadius:'50%'}}/>
         <p style={{fontSize:'.72rem',textTransform:'uppercase',letterSpacing:'.15em',color:'var(--gold-dim)',marginBottom:'.5rem',fontWeight:600}}>Balance total</p>
-        <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'3rem',fontWeight:600,color:'var(--white)',lineHeight:1}}>Q {la?'...' :fmt(totalBalance)}</p>
-        <p style={{fontSize:'.82rem',color:'var(--muted)',marginTop:'.5rem'}}>{la?'...' :accounts.length} cuenta{accounts.length!==1?'s':''} activa{accounts.length!==1?'s':''}</p>
+        <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'3rem',fontWeight:600,color:'var(--white)',lineHeight:1}}>
+          Q {loadingMyAcc ? '...' : fmt(myBalance)}
+        </p>
+        <p style={{fontSize:'.82rem',color:'var(--muted)',marginTop:'.5rem'}}>
+          {loadingMyAcc ? '...' : `${myAccounts.length} cuenta${myAccounts.length!==1?'s':''} registrada${myAccounts.length!==1?'s':''}`}
+        </p>
       </div>
 
+      {/* Stats */}
       <div className="stats-grid">
         {[
-          {label:'Mis cuentas',value:la?'...':accounts.length,icon:'🏦'},
-          {label:'Mis tarjetas',value:lc?'...':cards.length,icon:'💳'},
-          {label:'Mis préstamos',value:ll?'...':loans.length,icon:'📋'},
-          {label:'Transacciones',value:lt?'...':transactions.length,icon:'↕️'},
+          {label:'Mis cuentas',   value: loadingMyAcc ? '...' : myAccounts.length,
+            icon:<svg viewBox="0 0 24 24" fill="none" width="20" height="20"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="#c8a951" strokeWidth="1.5" strokeLinecap="round"/><path d="M9 22V12h6v10" stroke="#c8a951" strokeWidth="1.5" strokeLinecap="round"/></svg>},
+          {label:'Mis tarjetas',  value: lc ? '...' : cards.length,
+            icon:<svg viewBox="0 0 24 24" fill="none" width="20" height="20"><rect x="2" y="5" width="20" height="14" rx="2" stroke="#c8a951" strokeWidth="1.5"/><path d="M2 10h20" stroke="#c8a951" strokeWidth="1.5" strokeLinecap="round"/></svg>},
+          {label:'Mis préstamos', value: ll ? '...' : loans.length,
+            icon:<svg viewBox="0 0 24 24" fill="none" width="20" height="20"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="#c8a951" strokeWidth="1.5" strokeLinecap="round"/></svg>},
+          {label:'Transacciones', value: lt ? '...' : transactions.length,
+            icon:<svg viewBox="0 0 24 24" fill="none" width="20" height="20"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" stroke="#c8a951" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>},
         ].map((s,i)=>(
-          <div key={i} className="stat-card">
-            <div className="stat-card-icon"><span style={{fontSize:'1.1rem'}}>{s.icon}</span></div>
-            <div className="stat-card-value">{s.value}</div>
-            <div className="stat-card-label">{s.label}</div>
-          </div>
-        ))}
+    <div key={i} className="stat-card" style={{
+      borderColor: s.label==='Bloqueadas' && !loadingMyAcc && myAccounts.filter(a=>a.status==='bloqueada').length > 0
+        ? 'rgba(224,92,92,0.25)' : undefined
+    }}>
+      <div className="stat-card-icon">{s.icon}</div>
+      <div className="stat-card-value" style={{
+        color: s.label==='Bloqueadas' && !loadingMyAcc && myAccounts.filter(a=>a.status==='bloqueada').length > 0
+          ? '#e05c5c'
+          : s.label==='Activas' && !loadingMyAcc && myAccounts.filter(a=>a.status==='activa').length > 0
+          ? '#4caf7d' : undefined
+      }}>{s.value}</div>
+      <div className="stat-card-label">{s.label}</div>
+    </div>
+  ))}
+</div>
+
+{!loadingMyAcc && myAccounts.length > 0 && (
+  <div style={{marginTop:'1.5rem'}}>
+
+    {/* Aviso cuentas bloqueadas */}
+    {myAccounts.filter(a=>a.status==='bloqueada').length > 0 && (
+      <div style={{
+        background:'rgba(224,92,92,0.06)',
+        border:'1px solid rgba(224,92,92,0.2)',
+        borderRadius:10, padding:'1rem 1.25rem',
+        marginBottom:'1rem',
+        display:'flex', alignItems:'center', gap:'.75rem'
+      }}>
+        <svg viewBox="0 0 24 24" fill="none" width="16" height="16" style={{flexShrink:0}}>
+          <rect x="3" y="11" width="18" height="11" rx="2" stroke="#e05c5c" strokeWidth="1.5"/>
+          <path d="M7 11V7a5 5 0 0110 0v4" stroke="#e05c5c" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+        <p style={{fontSize:'.82rem',color:'rgba(224,92,92,0.9)',lineHeight:1.5,margin:0}}>
+          Tienes <strong>{myAccounts.filter(a=>a.status==='bloqueada').length}</strong> cuenta{myAccounts.filter(a=>a.status==='bloqueada').length>1?'s':''} bloqueada{myAccounts.filter(a=>a.status==='bloqueada').length>1?'s':''}. Contacta al administrador para más información.
+        </p>
       </div>
+    )}
+
+    {/* Aviso cuentas inactivas */}
+    {myAccounts.filter(a=>a.status==='inactiva').length > 0 && (
+      <div style={{
+        background:'rgba(107,127,163,0.06)',
+        border:'1px solid rgba(107,127,163,0.2)',
+        borderRadius:10, padding:'1rem 1.25rem',
+        marginBottom:'1rem',
+        display:'flex', alignItems:'center', gap:'.75rem'
+      }}>
+        <svg viewBox="0 0 24 24" fill="none" width="16" height="16" style={{flexShrink:0}}>
+          <circle cx="12" cy="12" r="10" stroke="#6b7fa3" strokeWidth="1.5"/>
+          <path d="M12 8v4M12 16h.01" stroke="#6b7fa3" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+        <p style={{fontSize:'.82rem',color:'rgba(107,127,163,0.9)',lineHeight:1.5,margin:0}}>
+          Tienes <strong>{myAccounts.filter(a=>a.status==='inactiva').length}</strong> cuenta{myAccounts.filter(a=>a.status==='inactiva').length>1?'s':''} inactiva{myAccounts.filter(a=>a.status==='inactiva').length>1?'s':''}. Contacta al administrador para reactivarla.
+        </p>
+      </div>
+    )}
+
+    {/* Tabla */}
+    <div className="table-card">
+      <div className="table-header">
+        <span className="table-title">Mis cuentas bancarias</span>
+        <span style={{fontSize:'.78rem',color:'var(--muted)'}}>
+          {myAccounts.filter(a=>a.status==='activa').length} activa{myAccounts.filter(a=>a.status==='activa').length!==1?'s':''}
+          {myAccounts.filter(a=>a.status==='bloqueada').length > 0 && (
+            <span style={{color:'#e05c5c',marginLeft:'.5rem'}}>
+              · {myAccounts.filter(a=>a.status==='bloqueada').length} bloqueada{myAccounts.filter(a=>a.status==='bloqueada').length!==1?'s':''}
+            </span>
+          )}
+          {myAccounts.filter(a=>a.status==='inactiva').length > 0 && (
+            <span style={{color:'var(--muted)',marginLeft:'.5rem'}}>
+              · {myAccounts.filter(a=>a.status==='inactiva').length} inactiva{myAccounts.filter(a=>a.status==='inactiva').length!==1?'s':''}
+            </span>
+          )}
+        </span>
+      </div>
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th>N° Cuenta</th><th>Tipo</th><th>Balance</th>
+            <th>Moneda</th><th>Límite diario</th><th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {myAccounts.map((a,i)=>(
+            <tr key={i} style={{
+              opacity: a.status==='inactiva' ? 0.6 : 1,
+              background: a.status==='bloqueada' ? 'rgba(224,92,92,0.03)' : undefined
+            }}>
+              <td style={{fontFamily:'monospace',color:'var(--gold-pure)',fontSize:'.85rem'}}>
+                {a.accountNumber||'—'}
+              </td>
+              <td><Badge value={a.accountType}/></td>
+              <td style={{fontWeight:500,color: a.status==='bloqueada' ? 'var(--muted)' : 'var(--white)'}}>
+                Q {fmt(a.balance)}
+              </td>
+              <td style={{color:'var(--muted)',fontSize:'.82rem'}}>{a.currencyCode||'GTQ'}</td>
+              <td style={{color:'var(--muted)',fontSize:'.82rem'}}>Q {fmt(a.dailyWithdrawalLimit||0)}</td>
+              <td><Badge value={a.status}/></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
+
+      
 
       {/* Últimas transacciones */}
       <div className="table-card" style={{marginTop:'1.5rem'}}>
@@ -93,33 +220,138 @@ const UserOverview = () => {
     </div>
   );
 };
-
 /* ── Cuentas usuario ── */
 const UserAccounts = () => {
-  const {data,loading}=useData(getAccounts);
-  return(
+  const { user } = useAuthStore();
+  const [accounts, setAccounts] = useState([]);
+  const [loading, setLoading]   = useState(true);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    setLoading(true);
+    getAccountsByUser(user.id)
+      .then(res => {
+        const data = res.data?.data || res.data || [];
+        setAccounts(Array.isArray(data) ? data : []);
+      })
+      .catch(() => setAccounts([]))
+      .finally(() => setLoading(false));
+  }, [user?.id]);
+
+  const fmt     = (n) => Number(n||0).toLocaleString('es-GT', { minimumFractionDigits: 2 });
+  const fmtDate = (d) => d ? new Date(d).toLocaleDateString('es-GT') : '—';
+
+  return (
     <div>
-      <div className="page-header"><div><h1 className="page-title">Mis Cuentas</h1><p className="page-subtitle">Tus cuentas bancarias activas</p></div></div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:'1rem',marginBottom:'1.5rem'}}>
-        {loading?[1,2].map(i=><div key={i} className="stat-card"><div className="skeleton" style={{height:80}}/></div>):
-        data.map((a,i)=>(
-          <div key={i} style={{background:'linear-gradient(135deg,rgba(15,30,53,0.9),rgba(22,40,71,0.8))',border:'1px solid rgba(200,169,81,0.15)',borderRadius:16,padding:'1.5rem',position:'relative',overflow:'hidden'}}>
-            <div style={{position:'absolute',top:0,right:0,width:100,height:100,background:'radial-gradient(circle,rgba(200,169,81,0.05) 0%,transparent 70%)',borderRadius:'50%'}}/>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'1rem'}}>
-              <Badge value={a.accountType||a.AccountType||'—'}/>
-              <Badge value={a.status||a.Status||'—'}/>
-            </div>
-            <p style={{fontFamily:'monospace',color:'var(--gold-pure)',fontSize:'.85rem',marginBottom:'.5rem'}}>{a.accountNumber||a.AccountNumber||'—'}</p>
-            <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'1.8rem',fontWeight:600,color:'var(--white)'}}>Q {fmt(a.balance||a.Balance)}</p>
-            <p style={{fontSize:'.72rem',color:'var(--muted)',marginTop:'.4rem'}}>Apertura: {fmtDate(a.openingDate||a.createdAt)}</p>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Mis Cuentas</h1>
+          <p className="page-subtitle">Tus cuentas bancarias registradas</p>
+        </div>
+      </div>
+
+      {!loading && accounts.length === 0 && (
+        <div style={{ textAlign:'center', padding:'3rem', color:'var(--muted)' }}>
+          <svg viewBox="0 0 24 24" fill="none" width="48" height="48"
+            style={{ opacity:.2, display:'block', margin:'0 auto 1rem' }}>
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+              stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+          <p style={{ fontSize:'.9rem' }}>No tienes cuentas asignadas aún.</p>
+          <p style={{ fontSize:'.8rem', marginTop:'.5rem', color:'var(--muted)' }}>
+            Contacta a un administrador para crear tu cuenta bancaria.
+          </p>
+        </div>
+      )}
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:'1.25rem' }}>
+        {loading ? [1,2].map(i => (
+          <div key={i} className="stat-card">
+            <div className="skeleton" style={{ height:120 }}/>
           </div>
-        ))}
-        {!loading&&data.length===0&&<div style={{gridColumn:'1/-1',textAlign:'center',padding:'3rem',color:'var(--muted)'}}>No tienes cuentas activas</div>}
+        )) : accounts.map((a, i) => {
+          const status    = (a.status||'').toLowerCase();
+          const isBlocked = status === 'bloqueada';
+          const isInactive = status === 'inactiva';
+          const borderColor = isBlocked  ? 'rgba(224,92,92,0.25)'
+            : isInactive ? 'rgba(107,127,163,0.2)'
+            : 'rgba(200,169,81,0.15)';
+
+          return (
+            <div key={i} style={{
+              background: 'linear-gradient(135deg, rgba(15,30,53,0.95), rgba(22,40,71,0.85))',
+              border: `1px solid ${borderColor}`,
+              borderRadius: 16, padding: '1.5rem',
+              position: 'relative', overflow: 'hidden',
+            }}>
+              <div style={{ position:'absolute', top:-20, right:-20, width:120, height:120,
+                background:`radial-gradient(circle, ${isBlocked?'rgba(224,92,92,0.05)':'rgba(200,169,81,0.06)'} 0%, transparent 70%)`,
+                borderRadius:'50%' }}/>
+
+              {/* Header */}
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'1rem' }}>
+                <div>
+                  <p style={{ fontSize:'.68rem', textTransform:'uppercase', letterSpacing:'.1em', color:'var(--muted)', fontWeight:600, marginBottom:'.2rem' }}>
+                    {a.accountType || 'Cuenta'}
+                  </p>
+                  <p style={{ fontFamily:'monospace', color:'var(--gold-pure)', fontSize:'.82rem' }}>
+                    {a.accountNumber || '—'}
+                  </p>
+                </div>
+                <span style={{
+                  padding:'.2rem .65rem', borderRadius:20, fontSize:'.68rem', fontWeight:500,
+                  background: isBlocked  ? 'rgba(224,92,92,0.12)'
+                    : isInactive ? 'rgba(107,127,163,0.1)'
+                    : 'rgba(76,175,125,0.12)',
+                  border: `1px solid ${isBlocked ? 'rgba(224,92,92,0.25)' : isInactive ? 'rgba(107,127,163,0.2)' : 'rgba(76,175,125,0.25)'}`,
+                  color: isBlocked ? '#e05c5c' : isInactive ? 'var(--muted)' : '#4caf7d',
+                }}>
+                  {a.status || 'activa'}
+                </span>
+              </div>
+
+              {/* Balance */}
+              <p style={{
+                fontFamily:"'Cormorant Garamond',serif",
+                fontSize:'2rem', fontWeight:600,
+                color: isBlocked ? 'var(--muted)' : 'var(--white)',
+                lineHeight:1, marginBottom:'.75rem',
+              }}>
+                {a.currencyCode || 'Q'} {fmt(a.balance)}
+              </p>
+
+              {/* Footer */}
+              <div style={{ display:'flex', justifyContent:'space-between', paddingTop:'.75rem', borderTop:`1px solid ${borderColor}` }}>
+                <div>
+                  <p style={{ fontSize:'.62rem', color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.06em' }}>Apertura</p>
+                  <p style={{ fontSize:'.78rem', color:'var(--white)', marginTop:'.15rem' }}>
+                    {fmtDate(a.openingDate || a.createdAt)}
+                  </p>
+                </div>
+                <div style={{ textAlign:'right' }}>
+                  <p style={{ fontSize:'.62rem', color:'var(--muted)', textTransform:'uppercase', letterSpacing:'.06em' }}>Límite diario</p>
+                  <p style={{ fontSize:'.78rem', color:'var(--white)', marginTop:'.15rem' }}>
+                    Q {fmt(a.dailyWithdrawalLimit)}
+                  </p>
+                </div>
+              </div>
+
+              {isBlocked && (
+                <div style={{ marginTop:'.75rem', padding:'.5rem .75rem', background:'rgba(224,92,92,0.08)', borderRadius:8, display:'flex', alignItems:'center', gap:'.5rem' }}>
+                  <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+                    <rect x="3" y="11" width="18" height="11" rx="2" stroke="#e05c5c" strokeWidth="1.5"/>
+                    <path d="M7 11V7a5 5 0 0110 0v4" stroke="#e05c5c" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                  <p style={{ fontSize:'.72rem', color:'#e05c5c' }}>Cuenta bloqueada — contacta al banco</p>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 };
-
 /* ── Tarjetas usuario ── */
 const UserCards = () => {
   const {data,loading}=useData(getCards);
