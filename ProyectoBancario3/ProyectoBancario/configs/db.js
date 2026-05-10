@@ -16,9 +16,9 @@ export const dbConnection = async () => {
             console.log('MongoDB | conectado a mongoDB');
         });
 
-        mongoose.connection.on('open', () => {
-            console.log('MongoDB | conectado a la base de datos SistemaBancarioIN6BM');
-        });
+       mongoose.connection.on('open', () => {
+    console.log(`MongoDB | conectado a la base de datos: ${mongoose.connection.name}`);
+});
 
         mongoose.connection.on('reconnected', () => {
             console.log('MongoDB | reconectando a mongoDB');
