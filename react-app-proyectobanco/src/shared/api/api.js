@@ -11,9 +11,7 @@ const getToken = () => {
     const stored = localStorage.getItem('bancario-auth');
     if (!stored) return null;
     return JSON.parse(stored)?.state?.token || null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 };
 
 api.interceptors.request.use(
@@ -31,6 +29,18 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('bancario-auth');
       window.location.href = '/auth/login';
+    }
+    if (error.response?.status === 403) {
+      // El usuario ya no tiene permisos — verificar su rol actual
+      try {
+        const stored = localStorage.getItem('bancario-auth');
+        const state  = JSON.parse(stored)?.state;
+        const role   = state?.user?.role;
+        // Si está en el admin pero ya no tiene rol admin, redirige
+        if (window.location.pathname.includes('/dashboard/admin') && role !== 'ADMIN_ROLE') {
+          window.location.href = '/dashboard';
+        }
+      } catch {}
     }
     return Promise.reject(error);
   }
