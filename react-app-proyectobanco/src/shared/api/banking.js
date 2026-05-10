@@ -1,5 +1,12 @@
 import axios from 'axios';
 
+const delay = (ms) => new Promise(r => setTimeout(r, ms));
+
+// Versiones con delay para respetar rate limit del backend
+export const getAccountsDelayed  = () => delay(500).then(() => banking.get('/accounts/'));
+export const getCardsDelayed     = () => delay(1000).then(() => banking.get('/cards/'));
+export const getLoansDelayed     = () => delay(1500).then(() => banking.get('/loan'));
+
 const banking = axios.create({
   baseURL: import.meta.env.VITE_BANKING_URL || 'http://localhost:3006/api/v1',
   timeout: 10000,
@@ -37,12 +44,20 @@ export const updateCoin     = (id, data) => banking.put(`/coins/${id}`, data);
 export const deleteCoin     = (id)       => banking.delete(`/coins/${id}`);
 export const toggleCoinStatus = (id, status) => banking.patch(`/coins/${id}/status`, { status });
 
-// ── Accounts ───────────────────────────────────────
-export const getAccounts    = ()         => banking.get('/accounts/');
-export const getAccount     = (id)       => banking.get(`/accounts/${id}`);
-export const createAccount  = (data)     => banking.post('/accounts/create', data);
-export const updateAccount  = (id, data) => banking.put(`/accounts/${id}`, data);
-export const deleteAccount  = (id)       => banking.delete(`/accounts/${id}`);
+// ── Accounts CRUD completo ──────────────────────────────────
+export const getAccounts      = ()           => banking.get('/accounts/');
+export const getAccount       = (id)         => banking.get(`/accounts/${id}`);
+export const createAccount    = (data)       => banking.post('/accounts/create', data);
+export const updateAccount    = (id, data)   => banking.put(`/accounts/${id}`, data);
+export const deleteAccount    = (id)         => banking.delete(`/accounts/${id}`);
+export const toggleAccountStatus = (id, status) => banking.patch(`/accounts/${id}/status`, { status });
+
+// ── Account Locks CRUD completo ────────────────────────────
+export const getAccountLocks    = ()         => banking.get('/accountLocks/');
+export const getAccountLock     = (id)       => banking.get(`/accountLocks/${id}`);
+export const createAccountLock  = (data)     => banking.post('/accountLocks/create', data);
+export const updateAccountLock  = (id, data) => banking.put(`/accountLocks/${id}`, data);
+export const deleteAccountLock  = (id)       => banking.delete(`/accountLocks/${id}`);
 
 // ── Cards ──────────────────────────────────────────
 export const getCards       = ()         => banking.get('/cards/');
@@ -65,10 +80,6 @@ export const createLoan     = (data)     => banking.post('/loan/create', data);
 export const updateLoan     = (id, data) => banking.put(`/loan/${id}`, data);
 export const deleteLoan     = (id)       => banking.delete(`/loan/${id}`);
 
-// ── Account Locks ──────────────────────────────────
-export const getAccountLocks  = ()         => banking.get('/accountLocks/');
-export const createAccountLock = (data)    => banking.post('/accountLocks/create', data);
-export const deleteAccountLock = (id)      => banking.delete(`/accountLocks/${id}`);
 
 // ── Withdrawals ────────────────────────────────────
 export const createWithdrawal  = (data)    => banking.post('/withdrawal/', data);
