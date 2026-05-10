@@ -1,24 +1,21 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import useAuthStore from '../../features/auth/store/authStore';
 
-/*
-  Uso:
-    <RoleGuard allowedRoles={['ADMIN_ROLE']} />
-
-  Si el usuario tiene el rol correcto → renderiza la ruta.
-  Si no → redirige a /unauthorized.
-*/
 const RoleGuard = ({ allowedRoles = [] }) => {
   const { user } = useAuthStore();
 
-  // El rol puede estar en distintas posiciones según el backend
-  const roleName =
-    user?.role?.roleName ||
+  const role = user?.role ||
+    user?.UserRoles?.[0]?.Role?.Name ||
     user?.roleName ||
-    user?.role ||
-    '';
+    'USER_ROLE';
 
-  const hasAccess = allowedRoles.length === 0 || allowedRoles.includes(roleName);
+  const hasAccess = allowedRoles.length === 0 || allowedRoles.includes(role);
+
+  // Si intenta entrar al admin pero tiene rol de usuario → redirige al dashboard
+  if (!hasAccess && window.location.pathname.includes('/dashboard/admin')) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return hasAccess ? <Outlet /> : <Navigate to="/unauthorized" replace />;
 };
 
