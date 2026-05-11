@@ -6,7 +6,7 @@ import { requireRole } from './validate-role.js';
 // Validaciones para crear tarjeta
 export const validateCreateCard = [
     validateJWT,
-    requireRole('ADMIN_ROLE', 'MANAGER_ROLE'),
+    //requireRole('ADMIN_ROLE', 'MANAGER_ROLE'),
     body('userId')
         .notEmpty()
         .withMessage('El userId es requerido')
@@ -47,7 +47,7 @@ export const validateCreateCard = [
 // Validaciones para actualizar tarjeta
 export const validateUpdateCard = [
     validateJWT,
-    requireRole('ADMIN_ROLE', 'MANAGER_ROLE'),
+    //requireRole('ADMIN_ROLE', 'MANAGER_ROLE'),
     param('id')
         .notEmpty()
         .withMessage('El ID de la tarjeta es requerido'),
@@ -86,7 +86,7 @@ export const validateUpdateCard = [
 // Validaciones para obtener/eliminar tarjeta especifica
 export const validateCardById = [
     validateJWT,
-    requireRole('ADMIN_ROLE', 'MANAGER_ROLE'),
+    //requireRole('ADMIN_ROLE', 'MANAGER_ROLE'),
     param('id')
         .notEmpty()
         .withMessage('El ID de la tarjeta es requerido'),
