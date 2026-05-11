@@ -102,6 +102,11 @@ export const getLoan        = (id)       => banking.get(`/loan/${id}`);
 export const createLoan     = (data)     => banking.post('/loan/create', data);
 export const updateLoan     = (id, data) => banking.put(`/loan/${id}`, data);
 export const deleteLoan     = (id)       => banking.delete(`/loan/${id}`);
+
+export const getLoansDelayed = (status = 'solicitado') =>
+  delay(1500).then(() =>
+    banking.get(`/loan?status=${status}`)
+  );
  
 // ── Withdrawals ────────────────────────────────────
 export const createWithdrawal = (data)    => banking.post('/withdrawal/', data);

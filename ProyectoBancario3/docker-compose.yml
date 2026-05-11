@@ -14,7 +14,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   mongo:
-    image: mongo:4.4
+    image: mongo:7
     container_name: bancario_mongodb
     restart: always
     ports:
