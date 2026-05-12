@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createTransaction, getTransactions, getFavorites, updateTransaction, deleteTransaction, getTransactionById } from "./transaction.controller.js";
+import { createTransaction, getTransactions, getFavorites, updateTransaction, deleteTransaction, getTransactionById, getMyTransactions } from "./transaction.controller.js";
 import { validateCreateTransaction, validateUpdateTransaction, validateTransactionById } from "../../middlewares/transaction-validators.js";
 import { validateJWT } from "../../middlewares/validate-JWT.js";
 import { requireRole } from "../../middlewares/validate-role.js";
@@ -120,6 +120,7 @@ router.get('/', validateJWT, requireRole('ADMIN_ROLE'), getTransactions);
  */
 router.get('/favorites', validateJWT, requireRole('ADMIN_ROLE', 'MANAGER_ROLE', 'ATM_ROLE', 'USER_ROLE'), getFavorites);
 
+router.get('/my', validateJWT, getMyTransactions);
 /**
  * @swagger
  * /transaction/{id}:

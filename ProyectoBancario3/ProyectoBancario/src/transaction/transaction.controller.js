@@ -379,3 +379,26 @@ export const getTransactionById = async (req, res) => {
         });
     }
 };
+
+export const getMyTransactions = async (req, res) => {
+    try {
+        const userId = req.user?.sub || req.user?.userId || '';
+        if (!userId) {
+            return res.status(401).json({ success: false, message: 'No autenticado' });
+        }
+        const transactions = await Transaction.find({
+            executedByUserId: userId
+        }).sort({ createdAt: -1 }).limit(100);
+
+        return res.status(200).json({
+            success: true,
+            data: transactions
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Error al obtener transacciones',
+            error: error.message
+        });
+    }
+};
