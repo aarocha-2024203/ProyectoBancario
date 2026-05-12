@@ -59,7 +59,7 @@ const EmptyState = ({ text }) => (
   </td></tr>
 );
 
-/* ── Confirm modal ── */
+/* ── Confirm modall ── */
 const ConfirmModal = ({ open, title, message, onConfirm, onCancel }) => {
   if (!open) return null;
   return (
