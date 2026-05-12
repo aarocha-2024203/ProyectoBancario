@@ -1,10 +1,16 @@
-import { Router } from "express";
-import { createCard, getCards, updateCard, deleteCard, getCardById, changeCardStatus } from "./cards.controller.js";
-import { validateCreateCard, validateUpdateCard, validateCardById, validateReadCardById } from "../../middlewares/card-validators.js";
-import { validateJWT } from "../../middlewares/validate-JWT.js";
-import { requireRole } from "../../middlewares/validate-role.js";
+import { Router } from 'express';
+import {
+    createCard, getCards, updateCard, deleteCard,
+    getCardById, changeCardStatus, getMyCards
+} from './cards.controller.js';
+import { validateCreateCard, validateUpdateCard, validateCardById, validateReadCardById } from '../../middlewares/card-validators.js';
+import { validateJWT } from '../../middlewares/validate-JWT.js';
+import { requireRole } from '../../middlewares/validate-role.js';
 
 const router = Router();
+
+// Usuario ve sus propias tarjetas
+router.get('/my', validateJWT, getMyCards);
 
 /**
  * @swagger
