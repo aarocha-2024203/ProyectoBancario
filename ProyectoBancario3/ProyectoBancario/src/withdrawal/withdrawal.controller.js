@@ -65,6 +65,7 @@ export const getAccountStatement = async (req, res) => {
     try {
         const { id: accountNumber } = req.params;
         const userId = getAuthenticatedUserId(req);
+        const userRole = req.user?.role;
 
         if (!userId) {
             return res.status(401).json({
@@ -74,13 +75,20 @@ export const getAccountStatement = async (req, res) => {
             });
         }
 
-        // Verificar que la cuenta pertenezca al usuario antes de mostrar historial
-        const account = await Account.findOne({ accountNumber, userId });
-        
+        let account;
+
+        // Admin puede ver cualquier cuenta
+        if (userRole === 'ADMIN_ROLE' || userRole === 'MANAGER_ROLE') {
+            account = await Account.findOne({ accountNumber });
+        } else {
+            // Usuario solo puede ver sus propias cuentas
+            account = await Account.findOne({ accountNumber, userId });
+        }
+
         if (!account) {
             return res.status(403).json({
                 success: false,
-                message: 'No tienes permiso para ver el historial de esta cuenta.'
+                message: 'Cuenta no encontrada o no tienes permiso para verla.'
             });
         }
 
