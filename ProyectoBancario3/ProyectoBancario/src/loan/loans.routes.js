@@ -2,7 +2,7 @@
 // ARCHIVO: src/loan/loans.routes.js
 // ============================================================
 import { Router } from "express";
-import { createLoan, getLoans, getLoanById, updateLoan, deleteLoan } from "./loans.controller.js";
+import { createLoan, getLoans, getLoanById, updateLoan, deleteLoan, getMyLoans } from "./loans.controller.js";
 import { validateCreateLoan, validateUpdateLoan, validateLoanById } from "../../middlewares/loan-validators.js";
 import { validateJWT } from "../../middlewares/validate-JWT.js";
 import { requireRole } from "../../middlewares/validate-role.js";
@@ -86,6 +86,7 @@ router.post('/create', validateCreateLoan, createLoan);
  */
 router.get('/', validateJWT, requireRole('ADMIN_ROLE', 'MANAGER_ROLE', 'ATM_ROLE'), getLoans);
 
+router.get('/my', validateJWT, getMyLoans);
 /**
  * @swagger
  * /loan/{id}:
