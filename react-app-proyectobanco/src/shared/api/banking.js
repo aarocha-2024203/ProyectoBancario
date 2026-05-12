@@ -2,7 +2,7 @@ import axios from 'axios';
  
 const banking = axios.create({
   baseURL: import.meta.env.VITE_BANKING_URL || 'http://localhost:3006/api/v1',
-  timeout: 10000,
+  timeout: 30000,
   headers: { 'Content-Type': 'application/json' },
 });
  
@@ -20,6 +20,7 @@ banking.interceptors.request.use((config) => {
 banking.interceptors.response.use(
   (r) => r,
   (error) => {
+    console.error('AXIOS ERROR:', error.code, error.message, error?.response?.status, error?.response?.data);
     if (error.response?.status === 401) {
       localStorage.removeItem('bancario-auth');
       window.location.href = '/auth/login';
@@ -87,34 +88,38 @@ export const createCard       = (data)       => banking.post('/cards/create', da
 export const updateCard       = (id, data)   => banking.put(`/cards/${id}`, data);
 export const deleteCard       = (id)         => banking.delete(`/cards/${id}`);
 export const toggleCardStatus = (id, status) => banking.patch(`/cards/${id}/status`, { status });
- 
-export const getCardsDelayed = () => delay(1000).then(() => banking.get('/cards/'));
- 
+export const getCardsDelayed  = ()           => delay(1000).then(() => banking.get('/cards/'));
+export const getMyCards = () => banking.get('/cards/my');
 // ── Transactions ───────────────────────────────────
 export const getTransactions   = ()       => banking.get('/transaction/');
 export const getTransaction    = (id)     => banking.get(`/transaction/${id}`);
 export const createTransaction = (data)   => banking.post('/transaction/create', data);
 export const deleteTransaction = (id)     => banking.delete(`/transaction/${id}`);
- 
+export const getFavorites = () => banking.get('/transaction/favorites');
+export const updateTransaction = (id, data) => banking.put(`/transaction/${id}`, data);
 // ── Loans ──────────────────────────────────────────
-export const getLoans       = (status = 'solicitado') => banking.get(`/loan?status=${status}`);
+export const getLoans = () => banking.get('/loan?limit=100');
 export const getLoan        = (id)       => banking.get(`/loan/${id}`);
 export const createLoan     = (data)     => banking.post('/loan/create', data);
 export const updateLoan     = (id, data) => banking.put(`/loan/${id}`, data);
 export const deleteLoan     = (id)       => banking.delete(`/loan/${id}`);
 
-export const getLoansDelayed = (status = 'solicitado') =>
-  delay(1500).then(() =>
-    banking.get(`/loan?status=${status}`)
-  );
+export const getLoansDelayed = () => delay(1500).then(() => banking.get('/loan?limit=100'));
  
 // ── Withdrawals ────────────────────────────────────
 export const createWithdrawal = (data)    => banking.post('/withdrawal/', data);
-export const getStatement     = (account) => banking.get(`/withdrawal/statement/${account}`);
+export const getStatement = (account) =>
+  banking.get(`/withdrawal/statement/${account}`, {
+    headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+    params:  { _t: Date.now() }, // fuerza petición nueva
+  });
  
-// ── Deposits ───────────────────────────────────────
-export const createDeposit = (data) => banking.post('/deposits/create', data);
- 
+// ── Deposits ───────────────────────────────────────────
+export const createDeposit     = (data)         => banking.post('/deposits/create', data);
+export const getDeposits       = (params = '')  => banking.get(`/deposits/${params ? '?' + params : ''}`);
+export const getDepositById    = (id)           => banking.get(`/deposits/${id}`);
+export const updateDeposit     = (id, data)     => banking.put(`/deposits/${id}`, data);
+export const revertDeposit     = (id)           => banking.patch(`/deposits/${id}/revert`);
 // ── Services ───────────────────────────────────────
 export const getServices = () => banking.get('/service/');
  
