@@ -10,8 +10,8 @@ const cardSchema = mongoose.Schema({
     },
     cardNumber: {
         type: String,
-        required: [true, 'El numero de tarjeta es requerido'],
         unique: true,
+        sparse: true, // permite null para tarjetas pendientes
         trim: true,
         match: [/^\d{16}$/, 'El numero de tarjeta debe tener 16 digitos']
     },
@@ -25,45 +25,57 @@ const cardSchema = mongoose.Schema({
     },
     cvv: {
         type: String,
-        required: [true, 'El CVV es requerido'],
         trim: true,
         match: [/^\d{3,4}$/, 'El CVV debe tener 3 o 4 digitos']
     },
-    //fecha de emision
     issueDate: {
         type: Date,
         default: Date.now
     },
-    //fecha de vencimiento
     expirationDate: {
         type: Date,
-        required: [true, 'La fecha de vencimiento es requerida']
     },
-    //limite de credito (solo para tarjetas de credito)
     creditLimit: {
         type: Number,
         min: [0, 'El límite debe ser positivo']
     },
-    //saldo disponible (solo para tarjetas de credito)
     availableBalance: {
         type: Number,
         default: 0,
-        required: [true, 'El saldo disponible es requerido'],
-        min: [100, 'El saldo disponible debe ser al menos 100']
+        min: [0, 'El saldo disponible debe ser positivo']
     },
     status: {
         type: String,
         enum: {
-            values: ['activa', 'bloqueada', 'vencida', 'cancelada'],
+            values: ['activa', 'bloqueada', 'vencida', 'cancelada', 'pendiente', 'rechazada'],
             message: 'Estado no válido'
         },
-        default: 'activa'
+        default: 'pendiente'
     },
     pin: {
         type: String,
-        required: [true, 'El PIN es requerido'],
         trim: true,
         match: [/^\d{4}$/, 'El PIN debe tener 4 digitos']
+    },
+    // Campo para la nota de solicitud del usuario
+    requestNote: {
+        type: String,
+        trim: true,
+        default: ''
+    },
+    // Nota del admin al aprobar o rechazar
+    adminNote: {
+        type: String,
+        trim: true,
+        default: ''
+    },
+    franchise: {
+        type: String,
+        enum: {
+            values: ['VISA', 'MASTERCARD', 'AMEX'],
+            message: 'Franquicia no válida'
+        },
+        default: 'VISA'
     }
 }, {
     timestamps: true,
