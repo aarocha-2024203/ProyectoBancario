@@ -5,7 +5,7 @@ import {
     updateAccountStatement,
     deleteAccountStatement,
     getAccountStatementById,
-    downloadAccountStatementPdfByAccountNumber,
+    downloadAccountStatementPdfByAccountNumber, getMyAccountStatements,
 } from './accountStatements.controller.js';
 import {
     validateCreateAccountStatement,
@@ -127,7 +127,8 @@ router.get('/', getAccountStatements);
  *         description: Cuenta no encontrada
  */
 router.get('/account/:accountNumber/pdf', validateJWT, validateAccountStatementByAccountNumber, downloadAccountStatementPdfByAccountNumber);
-
+// Estados de cuenta del usuario autenticado
+router.get('/my', validateJWT, getMyAccountStatements);
 /**
  * @swagger
  * /accountStatements/{id}:
