@@ -297,34 +297,65 @@ export const downloadAccountStatementPdfByAccountNumber = async (req, res) => {
             })),
         });
 
-        // 11. Enviar el PDF por correo al usuario autenticado
-        await sendAccountStatementEmail({
-            email: userEmail,
-            name: userName,
-            pdfBuffer,
-            accountNumber: account.accountNumber,
-            periodStart,
-            periodEnd,
-        });
+        // 11. Intentar enviar correo — si falla no bloquea la respuesta
+try {
+    await sendAccountStatementEmail({
+        email: userEmail, name: userName, pdfBuffer,
+        accountNumber: account.accountNumber, periodStart, periodEnd,
+    });
+} catch (mailError) {
+    console.warn('[Statement] Correo no enviado:', mailError.message);
+}
 
-        // 12. Responder al cliente con confirmación 
-        return res.status(200).json({
-            success: true,
-            message: `Estado de cuenta enviado correctamente al correo ${userEmail}`,
-            data: {
-                statementId: statement._id,
-                accountNumber: account.accountNumber,
-                periodStart,
-                periodEnd,
-                sentTo: userEmail,
-            },
-        });
+// 12. Responder con los datos del estado generado
+return res.status(200).json({
+    success: true,
+    message: 'Estado de cuenta generado exitosamente',
+    data: {
+        statementId:            statement._id,
+        accountNumber:          account.accountNumber,
+        periodStart,
+        periodEnd,
+        openingBalance:         summary.openingBalance,
+        closingBalance:         summary.closingBalance,
+        totalDeposits:          summary.totalDeposits,
+        totalWithdrawals:       summary.totalWithdrawals,
+        totalTransfersSent:     summary.totalTransfersSent,
+        totalTransfersReceived: summary.totalTransfersReceived,
+        transactions:           allTransactions,
+    },
+});
 
     } catch (error) {
         return res.status(400).json({
             success: false,
             message: 'Error al generar o enviar el estado de cuenta',
             error: error.message,
+        });
+    }
+};
+
+export const getMyAccountStatements = async (req, res) => {
+    try {
+        const requesterUserId = req.user?.sub || req.user?.userId || '';
+        if (!requesterUserId) {
+            return res.status(401).json({ success: false, message: 'No autenticado' });
+        }
+
+        // Busca todas las cuentas del usuario
+        const accounts = await Account.find({ userId: requesterUserId });
+        const accountIds = accounts.map(a => a._id);
+
+        const statements = await AccountStatement.find({
+            accountId: { $in: accountIds }
+        }).sort({ createdAt: -1 }).limit(50);
+
+        return res.status(200).json({ success: true, data: statements });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'Error al obtener estados de cuenta',
+            error: error.message
         });
     }
 };
