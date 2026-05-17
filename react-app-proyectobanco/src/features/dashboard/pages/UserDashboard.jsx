@@ -899,11 +899,251 @@ const UserTransactions = () => {
   );
 };
 /* ── Préstamos usuario ── */
+const UserLoans = () => {
+  const { user }          = useAuthStore();
+  const [data, setData]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [myAccounts, setMyAccounts] = useState([]);
+  const [form, setForm]   = useState({
+    accountNumber:'', requestedAmount:'', loanPurpose:'',
+  });
 
+  const fmt     = (n) => n != null ? Number(n).toLocaleString('es-GT',{minimumFractionDigits:2}) : '—';
+  const fmtDate = (d) => d ? new Date(d).toLocaleDateString('es-GT') : '—';
 
+  const loadData = () => {
+  setLoading(true);
+  const token = JSON.parse(localStorage.getItem('bancario-auth'))?.state?.token;
+  fetch(`http://localhost:3006/api/v1/loan/my?_t=${Date.now()}`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  })
+    .then(r => r.json())
+    .then(d => setData(Array.isArray(d?.data) ? d.data : []))
+    .catch(() => setData([]))
+    .finally(() => setLoading(false));
 
+  if (user?.id) {
+    getAccountsByUser(user.id)
+      .then(res => {
+        const d = res.data?.data || res.data || [];
+        setMyAccounts(Array.isArray(d) ? d.filter(a=>a.status==='activa') : []);
+      })
+      .catch(() => setMyAccounts([]));
+  }
+};
 
+  useEffect(() => { loadData(); }, [user?.id]);
 
+  const handleSolicitar = async () => {
+  if (!form.accountNumber)   { showError('Selecciona una cuenta'); return; }
+  if (!form.requestedAmount || Number(form.requestedAmount) <= 0) { showError('El monto es obligatorio'); return; }
+  if (!form.loanPurpose)     { showError('El motivo del préstamo es obligatorio'); return; }
+  setSaving(true);
+  try {
+    await createLoan({
+      userId:          user?.id,
+      accountNumber:   form.accountNumber,
+      requestedAmount: Number(form.requestedAmount),
+      loanPurpose:     form.loanPurpose,
+      status:          'solicitado',
+      requestDate:     new Date().toISOString(),
+      termMonths:      12,    // valor por defecto — el admin lo ajusta
+      interestRate:    0,     // el admin define la tasa real
+      monthlyPayment:  0,
+      outstandingBalance: Number(form.requestedAmount),
+    });
+    showSuccess('Solicitud de préstamo enviada exitosamente');
+    setModal(false);
+    setForm({ accountNumber:'', requestedAmount:'', loanPurpose:'' });
+    loadData();
+  } catch(e) {
+    console.log('ERRORS:', JSON.stringify(e?.response?.data?.errors));
+    showError(e?.response?.data?.message || 'Error al solicitar el préstamo');
+  } finally { setSaving(false); }
+};
+  const statusColors = {
+    solicitado:  '#eab308',
+    aprobado:    '#4caf7d',
+    rechazado:   '#e05c5c',
+    desembolsado:'#6366f1',
+    pagado:      '#c8a951',
+    vencido:     '#ef4444',
+  };
+
+  const activos = data.filter(l => !['pagado','rechazado'].includes(l.status));
+
+  return (
+    <div>
+      <div className="page-header">
+        <div><h1 className="page-title">Mis Préstamos</h1><p className="page-subtitle">Estado de tus créditos y financiamientos</p></div>
+        <button className="btn-add" onClick={()=>setModal(true)}>
+          <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+          Solicitar préstamo
+        </button>
+      </div>
+
+      {/* Stats */}
+      <div className="stats-grid" style={{marginBottom:'1.5rem'}}>
+        {[
+          { label:'Total préstamos', value: loading?'...':data.length },
+          { label:'Activos',         value: loading?'...':activos.length },
+          { label:'Solicitados',     value: loading?'...':data.filter(l=>l.status==='solicitado').length },
+          { label:'Monto total',     value: loading?'...':'Q '+fmt(data.reduce((s,l)=>s+Number(l.requestedAmount||0),0)) },
+        ].map((s,i)=>(
+          <div key={i} className="stat-card">
+            <div className="stat-card-value">{s.value}</div>
+            <div className="stat-card-label">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tarjetas de préstamos activos */}
+      {!loading && activos.length > 0 && (
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(290px,1fr))',gap:'1.25rem',marginBottom:'1.5rem'}}>
+          {activos.map((l,i) => {
+            const color = statusColors[l.status] || '#c8a951';
+            const progreso = l.approvedAmount && l.outstandingBalance
+              ? Math.max(0, Math.min(100, ((l.approvedAmount - l.outstandingBalance) / l.approvedAmount) * 100))
+              : 0;
+            return (
+              <div key={i} style={{
+                background:'linear-gradient(135deg,rgba(15,30,53,0.95),rgba(22,40,71,0.85))',
+                border:`1px solid rgba(200,169,81,0.15)`,
+                borderRadius:16, padding:'1.5rem',
+                position:'relative', overflow:'hidden',
+              }}>
+                <div style={{position:'absolute',top:-20,right:-20,width:100,height:100,
+                  background:'radial-gradient(circle,rgba(200,169,81,0.06) 0%,transparent 70%)',borderRadius:'50%'}}/>
+
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'1rem'}}>
+                  <div>
+                    <p style={{fontSize:'.68rem',textTransform:'uppercase',letterSpacing:'.1em',color:'var(--muted)',marginBottom:'.2rem'}}>Préstamo</p>
+                    <p style={{fontFamily:'monospace',color:'var(--gold-pure)',fontSize:'.82rem'}}>{l.accountNumber||'—'}</p>
+                  </div>
+                  <span style={{padding:'.2rem .65rem',borderRadius:20,fontSize:'.7rem',fontWeight:600,background:`${color}18`,border:`1px solid ${color}40`,color}}>
+                    {l.status}
+                  </span>
+                </div>
+
+                <div style={{marginBottom:'1rem'}}>
+                  <p style={{fontSize:'.62rem',textTransform:'uppercase',color:'var(--muted)',letterSpacing:'.08em',marginBottom:'.25rem'}}>Monto aprobado</p>
+                  <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'1.6rem',fontWeight:600,color:'var(--white)'}}>
+                    Q {fmt(l.approvedAmount||l.requestedAmount)}
+                  </p>
+                </div>
+
+                {/* Barra de progreso */}
+                {l.approvedAmount > 0 && (
+                  <div style={{marginBottom:'1rem'}}>
+                    <div style={{display:'flex',justifyContent:'space-between',fontSize:'.7rem',color:'var(--muted)',marginBottom:'.3rem'}}>
+                      <span>Pagado</span>
+                      <span>{Math.round(progreso)}%</span>
+                    </div>
+                    <div style={{height:4,borderRadius:2,background:'rgba(255,255,255,0.08)'}}>
+                      <div style={{height:'100%',borderRadius:2,background:'linear-gradient(90deg,#4caf7d,#c8a951)',width:`${progreso}%`,transition:'width .3s'}}/>
+                    </div>
+                  </div>
+                )}
+
+                <div style={{display:'flex',justifyContent:'space-between',paddingTop:'.75rem',borderTop:'1px solid rgba(255,255,255,0.06)'}}>
+                  <div>
+                    <p style={{fontSize:'.6rem',textTransform:'uppercase',color:'var(--muted)',letterSpacing:'.06em'}}>Cuota mensual</p>
+                    <p style={{fontSize:'.85rem',color:'var(--white)',fontWeight:500,marginTop:'.1rem'}}>Q {fmt(l.monthlyPayment||0)}</p>
+                  </div>
+                  <div style={{textAlign:'right'}}>
+                    <p style={{fontSize:'.6rem',textTransform:'uppercase',color:'var(--muted)',letterSpacing:'.06em'}}>Plazo</p>
+                    <p style={{fontSize:'.85rem',color:'var(--white)',marginTop:'.1rem'}}>{l.termMonths||'—'} meses</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Tabla historial */}
+      <div className="table-card">
+        <div className="table-header"><span className="table-title">Historial de préstamos ({data.length})</span></div>
+        <table className="data-table">
+          <thead>
+            <tr><th>Cuenta</th><th>Solicitado</th><th>Aprobado</th><th>Tasa</th><th>Plazo</th><th>Cuota</th><th>Estado</th><th>Fecha</th></tr>
+          </thead>
+          <tbody>
+            {loading ? <LoadingRows cols={8}/> : data.map((l,i) => {
+              const color = statusColors[l.status] || '#c8a951';
+              return (
+                <tr key={l._id||i}>
+                  <td style={{fontFamily:'monospace',color:'var(--gold-pure)',fontSize:'.82rem'}}>{l.accountNumber||'—'}</td>
+                  <td>Q {fmt(l.requestedAmount)}</td>
+                  <td style={{color:'#4caf7d',fontWeight:500}}>Q {fmt(l.approvedAmount||0)}</td>
+                  <td style={{color:'var(--muted)'}}>{l.interestRate||'—'}%</td>
+                  <td style={{color:'var(--muted)'}}>{l.termMonths||'—'} m</td>
+                  <td>Q {fmt(l.monthlyPayment||0)}</td>
+                  <td>
+                    <span style={{padding:'.2rem .6rem',borderRadius:20,fontSize:'.7rem',fontWeight:600,background:`${color}18`,border:`1px solid ${color}40`,color}}>
+                      {l.status}
+                    </span>
+                  </td>
+                  <td style={{color:'var(--muted)',fontSize:'.82rem'}}>{fmtDate(l.requestDate||l.createdAt)}</td>
+                </tr>
+              );
+            })}
+            {!loading && data.length===0 && <EmptyState text="Sin préstamos registrados"/>}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Modal solicitar */}
+      {modal && (
+        <div className="modal-overlay" onClick={()=>setModal(false)}>
+          <div className="modal" style={{maxWidth:460}} onClick={e=>e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-title">Solicitar Préstamo</span>
+              <button className="modal-close" onClick={()=>setModal(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div className="modal-field">
+                <label className="modal-label">Cuenta para desembolso *</label>
+                <select className="modal-select" value={form.accountNumber}
+                  onChange={e=>setForm(p=>({...p,accountNumber:e.target.value}))}>
+                  <option value="">Selecciona una cuenta</option>
+                  {myAccounts.map(a=>(
+                    <option key={a.accountNumber} value={a.accountNumber}>
+                      {a.accountNumber} — Q {fmt(a.balance)} ({a.accountType})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="modal-field">
+                <label className="modal-label">Monto solicitado (Q) *</label>
+                <input className="modal-input" type="number" placeholder="10000"
+                  value={form.requestedAmount}
+                  onChange={e=>setForm(p=>({...p,requestedAmount:e.target.value}))}/>
+              </div>
+              <div className="modal-field">
+                <label className="modal-label">Motivo del préstamo *</label>
+                <input className="modal-input" placeholder="¿Para qué necesitas el préstamo?"
+                  value={form.loanPurpose}
+                  onChange={e=>setForm(p=>({...p,loanPurpose:e.target.value}))}/>
+              </div>
+              <div style={{background:'rgba(200,169,81,0.05)',border:'1px solid rgba(200,169,81,0.12)',borderRadius:8,padding:'.85rem 1rem',fontSize:'.78rem',color:'rgba(200,169,81,0.8)',lineHeight:1.5}}>
+                ℹ️ Tu solicitud será revisada por un administrador. El monto aprobado, tasa de interés y plazo serán determinados por el banco.
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-cancel" onClick={()=>setModal(false)}>Cancelar</button>
+              <button className="btn-save" onClick={handleSolicitar} disabled={saving}>
+                {saving?<span className="spin"/>:'Enviar solicitud'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 /* ── Depósitos usuario ── */
 const UserDeposits = () => {
   const { user } = useAuthStore();
@@ -1083,7 +1323,7 @@ const UserDeposits = () => {
     </div>
   );
 };
-
+// RETIROSS 
 const UserWithdrawals = () => {
   const { user } = useAuthStore();
   const [modal, setModal]           = useState(false);
@@ -1409,31 +1649,418 @@ const UserWithdrawals = () => {
 
 /* ── Estado de cuenta usuario ── */
 const UserStatements = () => {
-  const {data,loading}=useData(getAccountStatements);
-  return(
+  const { user }                      = useAuthStore();
+  const [myAccounts, setMyAccounts]   = useState([]);
+  const [statements, setStatements]   = useState([]);
+  const [loadingStmt, setLoadingStmt] = useState(true);
+  const [generating, setGenerating]   = useState(false);
+  const [currentStmt, setCurrentStmt] = useState(null);
+  const [form, setForm] = useState({ accountNumber:'', periodStart:'', periodEnd:'' });
+
+  const fmt     = (n) => n != null ? Number(n).toLocaleString('es-GT',{minimumFractionDigits:2}) : '—';
+  const fmtDate = (d) => d ? new Date(d).toLocaleDateString('es-GT') : '—';
+  const fmtDateTime = (d) => d ? new Date(d).toLocaleString('es-GT') : '—';
+  const token   = () => JSON.parse(localStorage.getItem('bancario-auth'))?.state?.token;
+
+  const selectStyle = {
+    width:'100%', padding:'.6rem .85rem',
+    background:'rgba(255,255,255,0.06)',
+    border:'1px solid rgba(200,169,81,0.2)',
+    borderRadius:8, color:'var(--white)',
+    fontSize:'.85rem', outline:'none',
+    fontFamily:"'Outfit',sans-serif",
+    appearance:'none', cursor:'pointer',
+  };
+
+  const inputStyle = {
+    width:'100%', padding:'.6rem .85rem',
+    background:'rgba(255,255,255,0.06)',
+    border:'1px solid rgba(200,169,81,0.2)',
+    borderRadius:8, color:'var(--white)',
+    fontSize:'.85rem', outline:'none',
+    fontFamily:"'Outfit',sans-serif",
+    boxSizing:'border-box',
+  };
+
+  const loadData = () => {
+    if (!user?.id) return;
+    getAccountsByUser(user.id)
+      .then(res => {
+        const d = res.data?.data || res.data || [];
+        setMyAccounts(Array.isArray(d) ? d.filter(a=>a.status==='activa') : []);
+      })
+      .catch(() => setMyAccounts([]));
+
+    setLoadingStmt(true);
+    fetch(`http://localhost:3006/api/v1/accountStatements/my?_t=${Date.now()}`, {
+      headers: { 'Authorization': `Bearer ${token()}` }
+    })
+      .then(r => r.json())
+      .then(d => setStatements(Array.isArray(d?.data) ? d.data : []))
+      .catch(() => setStatements([]))
+      .finally(() => setLoadingStmt(false));
+  };
+
+  useEffect(() => { loadData(); }, [user?.id]);
+
+  const handleGenerate = async () => {
+    if (!form.accountNumber) { showError('Selecciona una cuenta'); return; }
+    setGenerating(true);
+    setCurrentStmt(null);
+    try {
+      const params = new URLSearchParams();
+      if (form.periodStart) params.append('periodStart', form.periodStart);
+      if (form.periodEnd)   params.append('periodEnd',   form.periodEnd);
+      const res  = await fetch(
+        `http://localhost:3006/api/v1/accountStatements/account/${form.accountNumber}/pdf?${params}`,
+        { headers: { 'Authorization': `Bearer ${token()}` } }
+      );
+      const data = await res.json();
+      if (data.success) {
+        setCurrentStmt(data.data);
+        showSuccess('Estado de cuenta generado exitosamente');
+        loadData();
+      } else {
+        showError(data.message || 'Error al generar');
+      }
+    } catch(e) { showError('Error de conexión'); }
+    finally { setGenerating(false); }
+  };
+
+  const handleDownload = (stmt) => {
+    const txRows = (stmt.transactions||[]).map(t => {
+      const isEntry = t.destinationAccountNumber === stmt.accountNumber;
+      const sign    = isEntry ? '+' : '-';
+      const color   = isEntry ? '#2e7d32' : '#c62828';
+      return `<tr>
+        <td>${fmtDateTime(t.transactionDate)}</td>
+        <td style="text-transform:capitalize">${t.transactionType||'—'}</td>
+        <td>${t.description||'—'}</td>
+        <td>${t.sourceAccountNumber||'—'}</td>
+        <td>${t.destinationAccountNumber||'—'}</td>
+        <td style="color:${color};font-weight:600;text-align:right">${sign} Q ${fmt(t.amount)}</td>
+      </tr>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Estado de Cuenta — ${stmt.accountNumber}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;padding:2.5rem;color:#222;background:#fff}
+    .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;padding-bottom:1rem;border-bottom:2px solid #1a3a6b}
+    .bank{font-size:1.4rem;font-weight:700;color:#1a3a6b}
+    .info{font-size:.85rem;color:#555;text-align:right}
+    h2{font-size:1.1rem;color:#1a3a6b;margin:1.5rem 0 .75rem}
+    .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem}
+    .card{background:#f5f7fa;border-radius:8px;padding:1rem;border-left:4px solid #1a3a6b}
+    .card.green{border-color:#2e7d32}
+    .card.red{border-color:#c62828}
+    .card-label{font-size:.72rem;text-transform:uppercase;color:#666;letter-spacing:.06em;margin-bottom:.3rem}
+    .card-value{font-size:1.1rem;font-weight:700;color:#222}
+    .card.green .card-value{color:#2e7d32}
+    .card.red .card-value{color:#c62828}
+    table{width:100%;border-collapse:collapse;font-size:.82rem}
+    th{background:#1a3a6b;color:#fff;padding:.6rem .75rem;text-align:left}
+    td{padding:.55rem .75rem;border-bottom:1px solid #eee}
+    tr:nth-child(even) td{background:#f9f9f9}
+    .footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #eee;font-size:.75rem;color:#999;text-align:center}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="bank">🏦 Banco Nacional</div>
+    <div class="info">
+      <div>Cuenta: <strong>${stmt.accountNumber}</strong></div>
+      <div>Período: ${fmtDate(stmt.periodStart)} — ${fmtDate(stmt.periodEnd)}</div>
+      <div>Generado: ${new Date().toLocaleString('es-GT')}</div>
+    </div>
+  </div>
+
+  <h2>Resumen del período</h2>
+  <div class="summary">
+    <div class="card"><div class="card-label">Balance apertura</div><div class="card-value">Q ${fmt(stmt.openingBalance)}</div></div>
+    <div class="card"><div class="card-label">Balance cierre</div><div class="card-value">Q ${fmt(stmt.closingBalance)}</div></div>
+    <div class="card green"><div class="card-label">Total depósitos</div><div class="card-value">+ Q ${fmt(stmt.totalDeposits)}</div></div>
+    <div class="card red"><div class="card-label">Total retiros</div><div class="card-value">- Q ${fmt(stmt.totalWithdrawals)}</div></div>
+    <div class="card red"><div class="card-label">Transferencias enviadas</div><div class="card-value">- Q ${fmt(stmt.totalTransfersSent)}</div></div>
+    <div class="card green"><div class="card-label">Transferencias recibidas</div><div class="card-value">+ Q ${fmt(stmt.totalTransfersReceived)}</div></div>
+  </div>
+
+  <h2>Movimientos del período (${(stmt.transactions||[]).length})</h2>
+  ${(stmt.transactions||[]).length > 0 ? `
+  <table>
+    <thead><tr><th>Fecha y hora</th><th>Tipo</th><th>Descripción</th><th>Origen</th><th>Destino</th><th>Monto</th></tr></thead>
+    <tbody>${txRows}</tbody>
+  </table>` : '<p style="color:#999;padding:1rem 0">Sin movimientos en el período seleccionado.</p>'}
+
+  <div class="footer">Documento generado electrónicamente — Banco Nacional · ${new Date().getFullYear()}</div>
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type:'text/html' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `estado-cuenta-${stmt.accountNumber}-${new Date().toISOString().slice(0,10)}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showSuccess('Estado de cuenta descargado');
+  };
+
+  const TxRow = ({ t, accountNumber }) => {
+    const isEntry = t.destinationAccountNumber === accountNumber;
+    const isRetiro= t.transactionType === 'retiro';
+    const isDeposit= t.transactionType === 'deposito';
+    const color   = (isEntry || isDeposit) && !isRetiro ? '#4caf7d' : '#e05c5c';
+    const sign    = (isEntry || isDeposit) && !isRetiro ? '+' : '-';
+    return (
+      <div style={{
+        display:'grid', gridTemplateColumns:'1fr 100px 90px',
+        gap:'.75rem', alignItems:'center',
+        padding:'.75rem', borderRadius:8,
+        background:'rgba(255,255,255,0.02)',
+        border:'1px solid rgba(255,255,255,0.05)',
+        marginBottom:'.5rem',
+      }}>
+        <div>
+          <div style={{display:'flex',alignItems:'center',gap:'.5rem',marginBottom:'.2rem'}}>
+            <span style={{
+              padding:'.15rem .5rem', borderRadius:20, fontSize:'.68rem', fontWeight:600,
+              background: isRetiro||(!isEntry&&!isDeposit) ? 'rgba(224,92,92,0.1)' : 'rgba(76,175,125,0.1)',
+              color: isRetiro||(!isEntry&&!isDeposit) ? '#e05c5c' : '#4caf7d',
+              textTransform:'capitalize',
+            }}>{t.transactionType}</span>
+            {t.favorito && <span style={{color:'#eab308',fontSize:'.75rem'}}>★ {t.alias}</span>}
+          </div>
+          <p style={{fontSize:'.78rem',color:'var(--muted)',marginBottom:'.15rem'}}>{t.description||'—'}</p>
+          <p style={{fontSize:'.72rem',color:'rgba(255,255,255,0.25)'}}>{fmtDateTime(t.transactionDate)}</p>
+          {t.sourceAccountNumber && t.destinationAccountNumber && (
+            <p style={{fontSize:'.7rem',color:'rgba(255,255,255,0.2)',marginTop:'.1rem',fontFamily:'monospace'}}>
+              {t.sourceAccountNumber} → {t.destinationAccountNumber}
+            </p>
+          )}
+        </div>
+        <div style={{textAlign:'right'}}>
+          <p style={{fontSize:'.72rem',color:'var(--muted)',marginBottom:'.15rem'}}>
+            {t.currencyCode||'GTQ'}
+          </p>
+          <p style={{fontSize:'.95rem',fontWeight:700,color,fontFamily:"'Cormorant Garamond',serif"}}>
+            {sign} Q {fmt(t.amount)}
+          </p>
+        </div>
+        <div style={{textAlign:'right'}}>
+          {t.newBalance != null ? (
+            <>
+              <p style={{fontSize:'.68rem',color:'rgba(255,255,255,0.25)',marginBottom:'.1rem'}}>Saldo</p>
+              <p style={{fontSize:'.82rem',color:'var(--white)',fontWeight:500}}>Q {fmt(t.newBalance)}</p>
+            </>
+          ) : null}
+        </div>
+      </div>
+    );
+  };
+
+  return (
     <div>
-      <div className="page-header"><div><h1 className="page-title">Estado de Cuenta</h1><p className="page-subtitle">Historial de estados de tu cuenta</p></div></div>
-      <div className="table-card">
-        <div className="table-header"><span className="table-title">Estados ({data.length})</span></div>
-        <table className="data-table">
-          <thead><tr><th>Cuenta</th><th>Balance inicial</th><th>Balance final</th><th>Fecha</th></tr></thead>
-          <tbody>
-            {loading?<LoadingRows cols={4}/>:data.map((s,i)=>(
-              <tr key={i}>
-                <td style={{fontFamily:'monospace',color:'var(--gold-pure)'}}>{s.accountNumber||s.accountId||'—'}</td>
-                <td>Q {fmt(s.openingBalance||s.initialBalance||0)}</td>
-                <td style={{fontWeight:500,color:'var(--white)'}}>Q {fmt(s.closingBalance||s.finalBalance||0)}</td>
-                <td style={{color:'var(--muted)',fontSize:'.82rem'}}>{fmtDate(s.createdAt||s.date)}</td>
-              </tr>
-            ))}
-            {!loading&&data.length===0&&<EmptyState text="Sin estados de cuenta"/>}
-          </tbody>
-        </table>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Estado de Cuenta</h1>
+          <p className="page-subtitle">Genera y descarga tus estados de cuenta</p>
+        </div>
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'360px 1fr',gap:'1.5rem',alignItems:'start'}}>
+
+        {/* Panel izquierdo — formulario */}
+        <div style={{background:'linear-gradient(135deg,rgba(15,30,53,0.95),rgba(22,40,71,0.85))',border:'1px solid rgba(200,169,81,0.15)',borderRadius:20,padding:'1.75rem',position:'sticky',top:'1rem'}}>
+          <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'1.2rem',fontWeight:600,color:'var(--white)',marginBottom:'1.25rem'}}>
+            Generar estado
+          </p>
+
+          <div style={{marginBottom:'.85rem'}}>
+            <label style={{display:'block',fontSize:'.72rem',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:'.4rem',fontWeight:500}}>
+              Cuenta bancaria *
+            </label>
+            <select style={selectStyle} value={form.accountNumber}
+              onChange={e=>setForm(p=>({...p,accountNumber:e.target.value}))}>
+              <option value="" style={{background:'#0f1e35',color:'#fff'}}>Selecciona una cuenta</option>
+              {myAccounts.map(a=>(
+                <option key={a.accountNumber} value={a.accountNumber}
+                  style={{background:'#0f1e35',color:'#fff'}}>
+                  {a.accountNumber} — Q {fmt(a.balance)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{marginBottom:'.85rem'}}>
+            <label style={{display:'block',fontSize:'.72rem',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:'.4rem',fontWeight:500}}>
+              Fecha inicio (opcional)
+            </label>
+            <input style={inputStyle} type="date"
+              value={form.periodStart}
+              onChange={e=>setForm(p=>({...p,periodStart:e.target.value}))}/>
+          </div>
+
+          <div style={{marginBottom:'1rem'}}>
+            <label style={{display:'block',fontSize:'.72rem',color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.08em',marginBottom:'.4rem',fontWeight:500}}>
+              Fecha fin (opcional)
+            </label>
+            <input style={inputStyle} type="date"
+              value={form.periodEnd}
+              onChange={e=>setForm(p=>({...p,periodEnd:e.target.value}))}/>
+          </div>
+
+          <div style={{background:'rgba(200,169,81,0.05)',border:'1px solid rgba(200,169,81,0.1)',borderRadius:8,padding:'.75rem',fontSize:'.73rem',color:'rgba(200,169,81,0.7)',lineHeight:1.5,marginBottom:'1rem'}}>
+            ℹ️ Sin fechas genera el estado del mes actual.
+          </div>
+
+          <button onClick={handleGenerate} disabled={generating||!form.accountNumber}
+            style={{
+              width:'100%', padding:'.85rem',
+              background: generating||!form.accountNumber ? 'rgba(200,169,81,0.08)' : 'linear-gradient(135deg,#b8942e,#c8a951)',
+              color: generating||!form.accountNumber ? 'rgba(200,169,81,0.35)' : '#060810',
+              border: `1px solid ${!form.accountNumber?'rgba(200,169,81,0.1)':'transparent'}`,
+              borderRadius:10, fontFamily:"'Outfit',sans-serif", fontSize:'.88rem', fontWeight:700,
+              cursor: generating||!form.accountNumber ? 'not-allowed' : 'pointer',
+              display:'flex', alignItems:'center', justifyContent:'center', gap:'.6rem', transition:'all .2s',
+            }}>
+            {generating
+              ? <><span style={{display:'inline-block',width:16,height:16,border:'2px solid rgba(6,8,16,.3)',borderTopColor:'#060810',borderRadius:'50%',animation:'spin .65s linear infinite'}}/> Generando...</>
+              : <>
+                  <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" strokeWidth="1.5"/>
+                    <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                  Generar estado de cuenta
+                </>
+            }
+          </button>
+
+          {/* Historial compacto */}
+          {statements.length > 0 && (
+            <div style={{marginTop:'1.5rem'}}>
+              <p style={{fontSize:'.72rem',textTransform:'uppercase',letterSpacing:'.1em',color:'var(--muted)',fontWeight:600,marginBottom:'.75rem'}}>
+                Historial ({statements.length})
+              </p>
+              <div style={{display:'flex',flexDirection:'column',gap:'.5rem',maxHeight:220,overflowY:'auto'}}>
+                {statements.map((s,i)=>(
+                  <div key={s._id||i} style={{
+                    background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.06)',
+                    borderRadius:8,padding:'.75rem',display:'flex',justifyContent:'space-between',alignItems:'center',
+                  }}>
+                    <div>
+                      <p style={{fontSize:'.75rem',color:'var(--white)',fontWeight:500,marginBottom:'.15rem'}}>
+                        {fmtDate(s.periodStart)} — {fmtDate(s.periodEnd)}
+                      </p>
+                      <p style={{fontSize:'.7rem',color:'var(--muted)'}}>Cierre: Q {fmt(s.closingBalance)}</p>
+                    </div>
+                    <button onClick={()=>handleDownload({...s,accountNumber:form.accountNumber,transactions:[]})}
+                      title="Descargar"
+                      style={{background:'rgba(200,169,81,0.08)',border:'1px solid rgba(200,169,81,0.15)',borderRadius:6,padding:'.4rem',cursor:'pointer',color:'var(--gold-pure)'}}>
+                      <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Panel derecho — resultado */}
+        <div>
+          {!currentStmt ? (
+            <div style={{
+              background:'linear-gradient(135deg,rgba(15,30,53,0.6),rgba(22,40,71,0.4))',
+              border:'1px dashed rgba(200,169,81,0.15)',
+              borderRadius:20,padding:'4rem 2rem',textAlign:'center',color:'var(--muted)',
+            }}>
+              <svg viewBox="0 0 24 24" fill="none" width="48" height="48"
+                style={{opacity:.1,display:'block',margin:'0 auto 1rem'}}>
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              <p style={{fontSize:'1rem',marginBottom:'.5rem'}}>Selecciona una cuenta y genera tu estado</p>
+              <p style={{fontSize:'.82rem'}}>Verás todos tus movimientos del período aquí.</p>
+            </div>
+          ) : (
+            <div style={{background:'linear-gradient(135deg,rgba(15,30,53,0.95),rgba(22,40,71,0.85))',border:'1px solid rgba(200,169,81,0.15)',borderRadius:20,padding:'1.75rem'}}>
+              {/* Header resultado */}
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'1.5rem'}}>
+                <div>
+                  <p style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'1.3rem',fontWeight:600,color:'var(--white)',marginBottom:'.25rem'}}>
+                    Estado de Cuenta
+                  </p>
+                  <p style={{fontFamily:'monospace',color:'var(--gold-pure)',fontSize:'.88rem'}}>{currentStmt.accountNumber}</p>
+                  <p style={{fontSize:'.75rem',color:'var(--muted)',marginTop:'.25rem'}}>
+                    {fmtDate(currentStmt.periodStart)} — {fmtDate(currentStmt.periodEnd)}
+                  </p>
+                </div>
+                <button onClick={()=>handleDownload(currentStmt)}
+                  style={{
+                    padding:'.6rem 1rem',
+                    background:'linear-gradient(135deg,rgba(200,169,81,0.15),rgba(200,169,81,0.08))',
+                    border:'1px solid rgba(200,169,81,0.3)',
+                    color:'var(--gold-pure)', borderRadius:8,
+                    fontFamily:"'Outfit',sans-serif", fontSize:'.78rem', fontWeight:600,
+                    cursor:'pointer', display:'flex', alignItems:'center', gap:'.4rem',
+                  }}>
+                  <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Descargar HTML
+                </button>
+              </div>
+
+              {/* Resumen en cards */}
+              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'.75rem',marginBottom:'1.5rem'}}>
+                {[
+                  { label:'Bal. apertura', value:'Q '+fmt(currentStmt.openingBalance), neutral:true },
+                  { label:'Bal. cierre',   value:'Q '+fmt(currentStmt.closingBalance), gold:true },
+                  { label:'Depósitos',     value:'+ Q '+fmt(currentStmt.totalDeposits), green:true },
+                  { label:'Retiros',       value:'- Q '+fmt(currentStmt.totalWithdrawals), red:true },
+                  { label:'Transf. enviadas', value:'- Q '+fmt(currentStmt.totalTransfersSent), red:true },
+                  { label:'Transf. recibidas',value:'+ Q '+fmt(currentStmt.totalTransfersReceived), green:true },
+                ].map(({label,value,green,red,gold,neutral})=>(
+                  <div key={label} style={{
+                    background:'rgba(255,255,255,0.03)',border:`1px solid ${green?'rgba(76,175,125,0.2)':red?'rgba(224,92,92,0.2)':gold?'rgba(200,169,81,0.2)':'rgba(255,255,255,0.06)'}`,
+                    borderRadius:10,padding:'.85rem',
+                  }}>
+                    <p style={{fontSize:'.65rem',textTransform:'uppercase',color:'var(--muted)',letterSpacing:'.08em',marginBottom:'.3rem'}}>{label}</p>
+                    <p style={{fontSize:'.9rem',fontWeight:700,color:green?'#4caf7d':red?'#e05c5c':gold?'var(--gold-pure)':'var(--white)'}}>{value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Movimientos */}
+              <div>
+                <p style={{fontSize:'.72rem',textTransform:'uppercase',letterSpacing:'.1em',color:'var(--muted)',fontWeight:600,marginBottom:'.85rem'}}>
+                  Movimientos del período ({(currentStmt.transactions||[]).length})
+                </p>
+                {(currentStmt.transactions||[]).length === 0 ? (
+                  <div style={{textAlign:'center',padding:'2rem',color:'var(--muted)',background:'rgba(255,255,255,0.02)',borderRadius:10}}>
+                    Sin movimientos en el período seleccionado.
+                  </div>
+                ) : (
+                  <div style={{maxHeight:420,overflowY:'auto',paddingRight:'.25rem'}}>
+                    {currentStmt.transactions.map((t,i)=>(
+                      <TxRow key={t._id||i} t={t} accountNumber={currentStmt.accountNumber}/>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 };
-
 /* ══ MAIN ══ */
 const USER_SECTIONS = {
   overview:UserOverview, 
