@@ -1,0 +1,20 @@
+{
+  "name": "proyecto-bancario-monorepo",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n auth,banking,web -c blue,green,yellow \"pnpm --filter ProyectoBancario-auth dev\" \"pnpm --filter ProyectoBancario dev\" \"pnpm --filter react-app-proyectobanco dev\"",
+    "dev:services": "concurrently -n auth,banking -c blue,green \"pnpm --filter ProyectoBancario-auth dev\" \"pnpm --filter ProyectoBancario dev\"",
+    "dev:web": "pnpm --filter react-app-proyectobanco dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "argon2",
+      "esbuild"
+    ]
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

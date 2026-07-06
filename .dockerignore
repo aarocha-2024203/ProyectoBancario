@@ -1,0 +1,6 @@
+.git
+.gitignore
+node_modules/
+app-movil-proyectobancario/
+**/node_modules/
+*.md
