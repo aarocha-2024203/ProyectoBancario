@@ -2,7 +2,7 @@ import Card from './cards.model.js';
 import { getUniqueCardNumber } from '../../helpers/card.helper.js';
 
 const getUserById = async (userId) => {
-    const response = await fetch(`http://bancario_auth:3005/api/v1/auth/profile-by-id`, {
+    const response = await fetch(`${process.env.AUTH_SERVICE_URL}/api/v1/auth/profile-by-id`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId })
