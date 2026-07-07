@@ -7,7 +7,7 @@ import LoadingRows from '../../shared/LoadingRows';
 import EmptyState from '../../shared/EmptyState';
 import ConfirmModal from '../../shared/ConfirmModal';
 import { fmt, fmtDate } from '../../shared/formatters';
-
+const BANKING_URL = import.meta.env.VITE_BANKING_URL || 'http://localhost:3006/api/v1';
 const TransactionsSection = () => {
   const { data, loading, reload } = useData(getTransactions);
   const [search, setSearch]   = useState('');
@@ -23,7 +23,7 @@ const TransactionsSection = () => {
   const handleDelete = async () => {
     try {
       const token = JSON.parse(localStorage.getItem('bancario-auth'))?.state?.token;
-      await fetch(`http://localhost:3006/api/v1/transaction/${confirm._id || confirm.id}`, {
+      await fetch(`${BANKING_URL}/transaction/${confirm._id || confirm.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

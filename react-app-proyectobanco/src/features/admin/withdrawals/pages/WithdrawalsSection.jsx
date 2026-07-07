@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { showSuccess, showError } from '../../../../shared/utils/toast';
 import EmptyState from '../../shared/EmptyState';
 import { fmt } from '../../shared/formatters';
-
+const BANKING_URL = import.meta.env.VITE_BANKING_URL || 'http://localhost:3006/api/v1';
 const WithdrawalsSection = () => {
   const [stmtData, setStmtData]       = useState(null);
   const [loadingStmt, setLoadingStmt] = useState(false);
@@ -17,7 +17,7 @@ const WithdrawalsSection = () => {
     try {
       const token = JSON.parse(localStorage.getItem('bancario-auth'))?.state?.token;
       const res = await fetch(
-        `http://localhost:3006/api/v1/withdrawal/statement/${accNum}?_t=${Date.now()}`,
+        `${BANKING_URL}/withdrawal/statement/${accNum}?_t=${Date.now()}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const data = await res.json();

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getAccountsByUser } from '../../../../shared/api/banking';
 import useAuthStore from '../../../auth/store/authStore';
-
+const BANKING_URL = import.meta.env.VITE_BANKING_URL || 'http://localhost:3006/api/v1';
 const useUserStatements = () => {
   const { user } = useAuthStore();
   const [myAccounts, setMyAccounts]   = useState([]);
@@ -21,7 +21,7 @@ const useUserStatements = () => {
       .catch(() => setMyAccounts([]));
 
     setLoadingStmt(true);
-    fetch(`http://localhost:3006/api/v1/accountStatements/my?_t=${Date.now()}`, {
+    fetch(`${BANKING_URL}/accountStatements/my?_t=${Date.now()}`, {
       headers: { Authorization: `Bearer ${token()}` },
     })
       .then(r => r.json())

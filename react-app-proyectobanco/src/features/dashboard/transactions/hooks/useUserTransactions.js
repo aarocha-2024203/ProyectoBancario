@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getFavorites } from '../../../../shared/api/banking';
 import useAuthStore from '../../../auth/store/authStore';
-
+const BANKING_URL = import.meta.env.VITE_BANKING_URL || 'http://localhost:3006/api/v1';
 const useUserTransactions = () => {
   const { user } = useAuthStore();
   const [data, setData]           = useState([]);
@@ -11,7 +11,7 @@ const useUserTransactions = () => {
   const load = () => {
     setLoading(true);
     const token = JSON.parse(localStorage.getItem('bancario-auth'))?.state?.token;
-    fetch(`http://localhost:3006/api/v1/transaction/my?_t=${Date.now()}`, {
+    fetch(`${BANKING_URL}/transaction/my?_t=${Date.now()}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.json())

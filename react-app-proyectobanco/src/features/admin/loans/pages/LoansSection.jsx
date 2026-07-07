@@ -8,6 +8,8 @@ import ConfirmModal from '../../shared/ConfirmModal';
 import LoanField from '../components/LoanField';
 import { fmt, fmtDate } from '../../shared/formatters';
 
+const BANKING_URL = import.meta.env.VITE_BANKING_URL || 'http://localhost:3006/api/v1';
+
 const STATUS_COLORS = {
   solicitado:   { bg: 'rgba(234,179,8,0.1)',  border: 'rgba(234,179,8,0.25)',  color: '#eab308' },
   aprobado:     { bg: 'rgba(76,175,125,0.1)', border: 'rgba(76,175,125,0.25)', color: '#4caf7d' },
@@ -104,7 +106,7 @@ const LoansSection = () => {
     try {
       const id    = editModal._id;
       const token = JSON.parse(localStorage.getItem('bancario-auth'))?.state?.token;
-      const res   = await fetch(`http://localhost:3006/api/v1/loan/${id}`, {
+      const res   = await fetch(`${BANKING_URL}/loan/${id}`, {
         method:  'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -139,7 +141,7 @@ const LoansSection = () => {
     const id    = confirm._id;
     const token = JSON.parse(localStorage.getItem('bancario-auth'))?.state?.token;
     try {
-      const res = await fetch(`http://localhost:3006/api/v1/loan/${id}`, {
+      const res = await fetch(`${BANKING_URL}/loan/${id}`, {
         method:  'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

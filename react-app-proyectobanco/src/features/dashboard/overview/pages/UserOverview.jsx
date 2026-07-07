@@ -5,7 +5,7 @@ import Badge from '../../shared/Badge';
 import LoadingRows from '../../shared/LoadingRows';
 import EmptyState from '../../shared/EmptyState';
 import { fmt, fmtDate } from '../../shared/formatters';
-
+const BANKING_URL = import.meta.env.VITE_BANKING_URL || 'http://localhost:3006/api/v1';
 const UserOverview = () => {
   const { user } = useAuthStore();
   const [myAccounts,   setMyAccounts]   = useState([]);
@@ -24,13 +24,13 @@ const UserOverview = () => {
       .catch(() => setMyAccounts([]))
       .finally(() => setLoadingAcc(false));
 
-    fetch(`http://localhost:3006/api/v1/cards/my?_t=${Date.now()}`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${BANKING_URL}/cards/my?_t=${Date.now()}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => setMyCards(Array.isArray(d?.data) ? d.data : []))
       .catch(() => setMyCards([]))
       .finally(() => setLoadingCards(false));
 
-    fetch(`http://localhost:3006/api/v1/transaction/my?_t=${Date.now()}`, { headers: { Authorization: `Bearer ${token}` } })
+   fetch(`${BANKING_URL}/transaction/my?_t=${Date.now()}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => setTransactions(Array.isArray(d?.data) ? d.data : []))
       .catch(() => setTransactions([]))

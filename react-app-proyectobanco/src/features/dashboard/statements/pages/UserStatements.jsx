@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { showSuccess, showError } from '../../../../shared/utils/toast';
 import useUserStatements from '../hooks/useUserStatements';
 import { fmt, fmtDate, fmtDateTime } from '../../shared/formatters';
-
+const BANKING_URL = import.meta.env.VITE_BANKING_URL || 'http://localhost:3006/api/v1';
 const UserStatements = () => {
   const { myAccounts, statements, loadingStmt, reload } = useUserStatements();
   const [generating, setGenerating]   = useState(false);
@@ -31,7 +31,7 @@ const UserStatements = () => {
       if (form.periodStart) params.append('periodStart', form.periodStart);
       if (form.periodEnd)   params.append('periodEnd',   form.periodEnd);
       const res  = await fetch(
-        `http://localhost:3006/api/v1/accountStatements/account/${form.accountNumber}/pdf?${params}`,
+        `${BANKING_URL}/accountStatements/account/${form.accountNumber}/pdf?${params}`,
         { headers: { Authorization: `Bearer ${token()}` } }
       );
       const data = await res.json();

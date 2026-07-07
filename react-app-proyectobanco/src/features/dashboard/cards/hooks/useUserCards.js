@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import useAuthStore from '../../../auth/store/authStore';
+import { getMyCards } from '../../../../shared/api/banking'; // ajusta la ruta según donde esté tu banking.js
 
 const useUserCards = () => {
   const { user } = useAuthStore();
@@ -8,12 +9,8 @@ const useUserCards = () => {
 
   const load = () => {
     setLoading(true);
-    const token = JSON.parse(localStorage.getItem('bancario-auth'))?.state?.token;
-    fetch(`http://localhost:3006/api/v1/cards/my?_t=${Date.now()}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.json())
-      .then(d => setCards(Array.isArray(d?.data) ? d.data : []))
+    getMyCards()
+      .then(r => setCards(Array.isArray(r.data?.data) ? r.data.data : []))
       .catch(() => setCards([]))
       .finally(() => setLoading(false));
   };
