@@ -18,7 +18,7 @@ const createTransporter = () => {
         user: config.smtp.username,
         pass: config.smtp.password,
         },
-        // Evitar que las peticiones HTTP queden colgadas si SMTP no responde
+        // Evitar que las peticiones HTTP queden colgadas si SMTP no respondes
         connectionTimeout: 10_000, // 10s
         greetingTimeout: 10_000, // 10s
         socketTimeout: 10_000, // 10s
