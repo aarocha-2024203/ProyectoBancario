@@ -123,6 +123,7 @@ const UserLoans = () => {
       {/* Tabla historial */}
       <div className="table-card">
         <div className="table-header"><span className="table-title">Historial de préstamos ({data.length})</span></div>
+        <div className="data-table-wrap">
         <table className="data-table">
           <thead><tr><th>Cuenta</th><th>Solicitado</th><th>Aprobado</th><th>Tasa</th><th>Plazo</th><th>Cuota</th><th>Estado</th><th>Fecha</th></tr></thead>
           <tbody>
@@ -144,6 +145,7 @@ const UserLoans = () => {
             {!loading && data.length === 0 && <EmptyState text="Sin préstamos registrados"/>}
           </tbody>
         </table>
+      </div>
       </div>
 
       {/* Modal solicitar */}

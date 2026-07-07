@@ -110,6 +110,7 @@ const UserOverview = () => {
               {bloqueadas.length > 0 && <span style={{ color: '#e05c5c', marginLeft: '.5rem' }}>· {bloqueadas.length} bloqueada{bloqueadas.length !== 1 ? 's' : ''}</span>}
             </span>
           </div>
+          <div className="data-table-wrap">
           <table className="data-table">
             <thead><tr><th>N° Cuenta</th><th>Tipo</th><th>Balance</th><th>Moneda</th><th>Límite diario</th><th>Estado</th></tr></thead>
             <tbody>
@@ -126,11 +127,13 @@ const UserOverview = () => {
             </tbody>
           </table>
         </div>
+        </div>
       )}
 
       {/* Últimos movimientos */}
       <div className="table-card" style={{ marginTop: '1.5rem' }}>
         <div className="table-header"><span className="table-title">Últimos movimientos</span></div>
+        <div className="data-table-wrap">
         <table className="data-table">
           <thead><tr><th>Tipo</th><th>Origen</th><th>Destino</th><th>Monto</th><th>Fecha</th></tr></thead>
           <tbody>
@@ -147,6 +150,7 @@ const UserOverview = () => {
           </tbody>
         </table>
       </div>
+    </div>
     </div>
   );
 };

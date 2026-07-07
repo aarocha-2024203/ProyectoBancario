@@ -124,6 +124,7 @@ const UserTransactions = () => {
                 Actualizar
               </button>
             </div>
+            <div className="data-table-wrap">
             <table className="data-table">
               <thead><tr><th>Tipo</th><th>Origen</th><th>Destino</th><th>Monto</th><th>Descripción</th><th>Fav</th><th>Fecha</th></tr></thead>
               <tbody>
@@ -141,6 +142,7 @@ const UserTransactions = () => {
                 {!loading && data.length === 0 && <EmptyState text="Sin transferencias realizadas"/>}
               </tbody>
             </table>
+            </div>
           </>
         )}
 

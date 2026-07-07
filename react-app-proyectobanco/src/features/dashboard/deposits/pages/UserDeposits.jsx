@@ -47,6 +47,7 @@ const UserDeposits = () => {
 
       <div className="table-card">
         <div className="table-header"><span className="table-title">Mis depósitos ({deposits.length})</span></div>
+        <div className="data-table-wrap">
         <table className="data-table">
           <thead><tr><th>N° Cuenta</th><th>Monto</th><th>Balance anterior</th><th>Balance nuevo</th><th>Descripción</th><th>Estado</th><th>Fecha</th></tr></thead>
           <tbody>
@@ -66,6 +67,7 @@ const UserDeposits = () => {
             }
           </tbody>
         </table>
+      </div>
       </div>
 
       {/* Modal */}
