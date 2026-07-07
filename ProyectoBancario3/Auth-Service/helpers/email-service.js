@@ -11,12 +11,12 @@ const createTransporter = () => {
     }
 
     return nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false, // true para 465, false para 587
+        host: config.smtp.host,
+        port: config.smtp.port,
+        secure: config.smtp.enableSsl,
         auth: {
-        user: "sistemabancarioin@gmail.com",
-        pass: "vcqoykwghlbkkwqx",
+        user: config.smtp.username,
+        pass: config.smtp.password,
         },
         // Evitar que las peticiones HTTP queden colgadas si SMTP no responde
         connectionTimeout: 10_000, // 10s
