@@ -27,6 +27,7 @@ export const config = {
         password: process.env.SMTP_PASSWORD,
         fromEmail: process.env.EMAIL_FROM,
         fromName: process.env.EMAIL_FROM_NAME,
+        brevoApiKey: process.env.BREVO_API_KEY,
     },
 
     // File Upload Configuration (aligned with .NET FileValidator)
