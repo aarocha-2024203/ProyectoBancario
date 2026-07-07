@@ -95,6 +95,7 @@ const StatementsSection = () => {
           </div>
         </div>
 
+        <div className="data-table-wrap">
         <table className="data-table">
           <thead>
             <tr>
@@ -131,6 +132,7 @@ const StatementsSection = () => {
             {!loading && filtered.length === 0 && <EmptyState text="Sin estados de cuenta generados" />}
           </tbody>
         </table>
+      </div>
       </div>
 
       <ConfirmModal

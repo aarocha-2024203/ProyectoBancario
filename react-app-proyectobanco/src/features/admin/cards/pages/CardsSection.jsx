@@ -151,7 +151,7 @@ const CardsSection = () => {
       <div className="table-card">
         <div className="table-header">
           <span className="table-title">Todas las tarjetas ({filtered.length})</span>
-          <div style={{ display: 'flex', gap: '.75rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <div className="search-input-wrap">
               <span className="search-icon">
                 <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
@@ -171,56 +171,58 @@ const CardsSection = () => {
           </div>
         </div>
 
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>N° Tarjeta</th><th>Usuario ID</th><th>Tipo</th><th>Franquicia</th>
-              <th>Balance</th><th>Vencimiento</th><th>Estado</th><th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? <LoadingRows cols={8}/> : filtered.map((c, i) => {
-              const id = c._id || c.id;
-              const status = (c.status || 'activa').toLowerCase();
-              const isBlocked = status === 'bloqueada';
-              return (
-                <tr key={i}>
-                  <td style={{ fontFamily: 'monospace', fontSize: '.82rem', color: 'var(--gold-pure)' }}>
-                    {c.cardNumber ? `···· ${c.cardNumber.slice(-4)}` : '—'}
-                  </td>
-                  <td style={{ fontSize: '.78rem', color: 'var(--muted)', fontFamily: 'monospace', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.userId || '—'}</td>
-                  <td style={{ textTransform: 'capitalize' }}>{c.cardType || '—'}</td>
-                  <td>{c.franchise || '—'}</td>
-                  <td style={{ fontWeight: 500, color: 'var(--white)' }}>Q {fmt(c.availableBalance)}</td>
-                  <td style={{ color: 'var(--muted)', fontSize: '.82rem' }}>{fmtDate(c.expirationDate)}</td>
-                  <td><Badge value={c.status || 'activa'}/></td>
-                  <td>
-                    <div className="action-btns">
-                      <button className="btn-icon" title="Editar" onClick={() => openEdit(c)}>
-                        <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
-                          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                        </svg>
-                      </button>
-                      <button className="btn-icon" title={isBlocked ? 'Activar' : 'Bloquear'} disabled={toggling === id} onClick={() => handleToggle(id, status)} style={{ color: isBlocked ? '#4caf7d' : '#eab308' }}>
-                        {toggling === id ? <span className="spin"/> : isBlocked
-                          ? <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M7 11V7a5 5 0 0110 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                          : <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                        }
-                      </button>
-                      <button className="btn-icon danger" title="Eliminar" onClick={() => setConfirm({ id, label: `···· ${(c.cardNumber || '').slice(-4)}` })}>
-                        <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
-                          <path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {!loading && filtered.length === 0 && <EmptyState text="Sin tarjetas registradas"/>}
-          </tbody>
-        </table>
+        <div className="data-table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>N° Tarjeta</th><th>Usuario ID</th><th>Tipo</th><th>Franquicia</th>
+                <th>Balance</th><th>Vencimiento</th><th>Estado</th><th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? <LoadingRows cols={8}/> : filtered.map((c, i) => {
+                const id = c._id || c.id;
+                const status = (c.status || 'activa').toLowerCase();
+                const isBlocked = status === 'bloqueada';
+                return (
+                  <tr key={i}>
+                    <td style={{ fontFamily: 'monospace', fontSize: '.82rem', color: 'var(--gold-pure)' }}>
+                      {c.cardNumber ? `···· ${c.cardNumber.slice(-4)}` : '—'}
+                    </td>
+                    <td style={{ fontSize: '.78rem', color: 'var(--muted)', fontFamily: 'monospace', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.userId || '—'}</td>
+                    <td style={{ textTransform: 'capitalize' }}>{c.cardType || '—'}</td>
+                    <td>{c.franchise || '—'}</td>
+                    <td style={{ fontWeight: 500, color: 'var(--white)' }}>Q {fmt(c.availableBalance)}</td>
+                    <td style={{ color: 'var(--muted)', fontSize: '.82rem' }}>{fmtDate(c.expirationDate)}</td>
+                    <td><Badge value={c.status || 'activa'}/></td>
+                    <td>
+                      <div className="action-btns">
+                        <button className="btn-icon" title="Editar" onClick={() => openEdit(c)}>
+                          <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                          </svg>
+                        </button>
+                        <button className="btn-icon" title={isBlocked ? 'Activar' : 'Bloquear'} disabled={toggling === id} onClick={() => handleToggle(id, status)} style={{ color: isBlocked ? '#4caf7d' : '#eab308' }}>
+                          {toggling === id ? <span className="spin"/> : isBlocked
+                            ? <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M7 11V7a5 5 0 0110 0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                            : <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                          }
+                        </button>
+                        <button className="btn-icon danger" title="Eliminar" onClick={() => setConfirm({ id, label: `···· ${(c.cardNumber || '').slice(-4)}` })}>
+                          <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+                            <path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {!loading && filtered.length === 0 && <EmptyState text="Sin tarjetas registradas"/>}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Modal crear */}

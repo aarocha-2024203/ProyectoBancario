@@ -114,6 +114,8 @@ const WithdrawalsSection = () => {
               <input className="search-input" placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)}/>
             </div>
           </div>
+
+          <div className="data-table-wrap">
           <table className="data-table">
             <thead>
               <tr>
@@ -137,6 +139,7 @@ const WithdrawalsSection = () => {
               }
             </tbody>
           </table>
+        </div>
         </div>
       )}
     </div>

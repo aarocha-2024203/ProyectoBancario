@@ -166,7 +166,7 @@ const AccountsSection = () => {
       <div className="table-card">
         <div className="table-header">
           <span className="table-title">Todas las cuentas ({filtered.length})</span>
-          <div style={{ display: 'flex', gap: '.75rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <div className="search-input-wrap">
               <span className="search-icon">
                 <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
@@ -191,69 +191,71 @@ const AccountsSection = () => {
           </div>
         </div>
 
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>N° Cuenta</th><th>Tipo</th><th>Titular</th><th>Usuario ID</th>
-              <th>Balance</th><th>Moneda</th><th>Estado</th><th>Apertura</th><th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && localData.length === 0 ? (
-              <LoadingRows cols={9} />
-            ) : (
-              filtered.map((a, i) => {
-                const status = (a.status || '').toLowerCase();
-                return (
-                  <tr key={a.accountNumber || i}>
-                    <td style={{ fontFamily: 'monospace', color: 'var(--gold-pure)', fontSize: '.85rem' }}>{a.accountNumber || '—'}</td>
-                    <td><Badge value={a.accountType} /></td>
-                    <td style={{ color: 'var(--white)', fontSize: '.85rem' }}>{a.name || '—'}</td>
-                    <td style={{ color: 'var(--muted)', fontSize: '.78rem', fontFamily: 'monospace' }}>{a.userId || '—'}</td>
-                    <td style={{ fontWeight: 500, color: 'var(--white)' }}>Q {fmt(a.balance)}</td>
-                    <td style={{ color: 'var(--muted)', fontSize: '.8rem' }}>{a.currencyCode || 'GTQ'}</td>
-                    <td><Badge value={a.status || '—'} /></td>
-                    <td style={{ color: 'var(--muted)', fontSize: '.8rem' }}>{fmtDate(a.openingDate || a.createdAt)}</td>
-                    <td>
-                      <div className="action-btns">
-                        <button className="btn-icon" title="Ver detalle" onClick={() => setDetailModal(a)}>
-                          <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
-                            <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                          </svg>
-                        </button>
-                        <button className="btn-icon" title="Editar" onClick={() => openEdit(a)}>
-                          <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
-                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                          </svg>
-                        </button>
-                        <button className="btn-icon" title={status === 'activa' ? 'Desactivar' : 'Activar'} onClick={() => handleToggleStatus(a)}>
-                          {status === 'activa' ? (
+        <div className="data-table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>N° Cuenta</th><th>Tipo</th><th>Titular</th><th>Usuario ID</th>
+                <th>Balance</th><th>Moneda</th><th>Estado</th><th>Apertura</th><th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && localData.length === 0 ? (
+                <LoadingRows cols={9} />
+              ) : (
+                filtered.map((a, i) => {
+                  const status = (a.status || '').toLowerCase();
+                  return (
+                    <tr key={a.accountNumber || i}>
+                      <td style={{ fontFamily: 'monospace', color: 'var(--gold-pure)', fontSize: '.85rem' }}>{a.accountNumber || '—'}</td>
+                      <td><Badge value={a.accountType} /></td>
+                      <td style={{ color: 'var(--white)', fontSize: '.85rem' }}>{a.name || '—'}</td>
+                      <td style={{ color: 'var(--muted)', fontSize: '.78rem', fontFamily: 'monospace' }}>{a.userId || '—'}</td>
+                      <td style={{ fontWeight: 500, color: 'var(--white)' }}>Q {fmt(a.balance)}</td>
+                      <td style={{ color: 'var(--muted)', fontSize: '.8rem' }}>{a.currencyCode || 'GTQ'}</td>
+                      <td><Badge value={a.status || '—'} /></td>
+                      <td style={{ color: 'var(--muted)', fontSize: '.8rem' }}>{fmtDate(a.openingDate || a.createdAt)}</td>
+                      <td>
+                        <div className="action-btns">
+                          <button className="btn-icon" title="Ver detalle" onClick={() => setDetailModal(a)}>
                             <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
-                              <path d="M18.36 6.64A9 9 0 015.64 19.36M6.34 6.34A9 9 0 0019 17.65M1 1l22 22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
+                              <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                             </svg>
-                          ) : (
+                          </button>
+                          <button className="btn-icon" title="Editar" onClick={() => openEdit(a)}>
                             <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
-                              <path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="#4caf7d" strokeWidth="1.5" strokeLinecap="round" />
-                              <path d="M22 4L12 14.01l-3-3" stroke="#4caf7d" strokeWidth="1.5" strokeLinecap="round" />
+                              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                              <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                             </svg>
-                          )}
-                        </button>
-                        <button className="btn-icon danger" title="Eliminar" onClick={() => setConfirm(a)}>
-                          <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
-                            <path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-            {!loading && filtered.length === 0 && <EmptyState text="Sin cuentas registradas" />}
-          </tbody>
-        </table>
+                          </button>
+                          <button className="btn-icon" title={status === 'activa' ? 'Desactivar' : 'Activar'} onClick={() => handleToggleStatus(a)}>
+                            {status === 'activa' ? (
+                              <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+                                <path d="M18.36 6.64A9 9 0 015.64 19.36M6.34 6.34A9 9 0 0019 17.65M1 1l22 22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                              </svg>
+                            ) : (
+                              <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+                                <path d="M22 11.08V12a10 10 0 11-5.93-9.14" stroke="#4caf7d" strokeWidth="1.5" strokeLinecap="round" />
+                                <path d="M22 4L12 14.01l-3-3" stroke="#4caf7d" strokeWidth="1.5" strokeLinecap="round" />
+                              </svg>
+                            )}
+                          </button>
+                          <button className="btn-icon danger" title="Eliminar" onClick={() => setConfirm(a)}>
+                            <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+                              <path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+              {!loading && filtered.length === 0 && <EmptyState text="Sin cuentas registradas" />}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Modal Crear / Editar */}

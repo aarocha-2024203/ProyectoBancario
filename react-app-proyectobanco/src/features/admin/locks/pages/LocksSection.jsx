@@ -170,6 +170,7 @@ const LocksSection = () => {
           </div>
         </div>
 
+        <div className="data-table-wrap">
         <table className="data-table">
           <thead>
             <tr>
@@ -211,6 +212,7 @@ const LocksSection = () => {
             {!loading && filtered.length === 0 && <EmptyState text="Sin bloqueos registrados" />}
           </tbody>
         </table>
+      </div>
       </div>
 
       {/* Modal Crear / Editar */}

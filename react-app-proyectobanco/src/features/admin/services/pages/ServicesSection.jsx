@@ -20,6 +20,8 @@ const ServicesSection = () => {
         <div className="table-header">
           <span className="table-title">Catálogo de servicios ({data.length})</span>
         </div>
+
+        <div className="data-table-wrap">
         <table className="data-table">
           <thead>
             <tr>
@@ -40,6 +42,7 @@ const ServicesSection = () => {
           </tbody>
         </table>
       </div>
+    </div>
     </div>
   );
 };

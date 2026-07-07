@@ -105,6 +105,7 @@ const UsersSection = () => {
           </div>
         </div>
 
+        <div className="data-table-wrap">
         <table className="data-table">
           <thead>
             <tr>
@@ -180,6 +181,7 @@ const UsersSection = () => {
             )}
           </tbody>
         </table>
+      </div>
       </div>
 
       {/* Modal detalle */}

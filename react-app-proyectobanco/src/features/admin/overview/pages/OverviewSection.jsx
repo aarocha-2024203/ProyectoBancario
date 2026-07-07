@@ -91,6 +91,8 @@ const OverviewSection = () => {
         <div className="table-header">
           <span className="table-title">Últimas cuentas creadas</span>
         </div>
+
+        <div className="data-table-wrap">
         <table className="data-table">
           <thead>
             <tr>
@@ -123,6 +125,7 @@ const OverviewSection = () => {
           </tbody>
         </table>
       </div>
+    </div>
     </div>
   );
 };

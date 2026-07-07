@@ -244,6 +244,7 @@ const LoansSection = () => {
           </div>
         </div>
 
+        <div className="data-table-wrap">
         <table className="data-table">
           <thead>
             <tr><th>Usuario</th><th>Cuenta</th><th>Solicitado</th><th>Aprobado</th><th>Tasa</th><th>Plazo</th><th>Cuota</th><th>Estado</th><th>Fecha</th><th>Acciones</th></tr>
@@ -285,6 +286,7 @@ const LoansSection = () => {
             {!loading && filtered.length === 0 && <EmptyState text="Sin préstamos registrados"/>}
           </tbody>
         </table>
+      </div>
       </div>
 
       {/* Modal crear */}

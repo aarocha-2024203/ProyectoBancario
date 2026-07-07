@@ -112,6 +112,7 @@ const DepositsSection = () => {
           </div>
         </div>
 
+        <div className="data-table-wrap">
         <table className="data-table">
           <thead>
             <tr>
@@ -136,6 +137,7 @@ const DepositsSection = () => {
             {!loading && filtered.length === 0 && <EmptyState text="Sin depósitos registrados"/>}
           </tbody>
         </table>
+      </div>
       </div>
 
       {/* Modal nuevo depósito */}

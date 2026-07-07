@@ -80,6 +80,7 @@ const TransactionsSection = () => {
           </div>
         </div>
 
+        <div className="data-table-wrap">
         <table className="data-table">
           <thead>
             <tr>
@@ -119,6 +120,7 @@ const TransactionsSection = () => {
             {!loading && filtered.length === 0 && <EmptyState text="Sin transacciones registradas"/>}
           </tbody>
         </table>
+      </div>
       </div>
 
       <ConfirmModal

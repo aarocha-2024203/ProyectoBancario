@@ -60,36 +60,38 @@ const CoinsSection = () => {
         <div className="table-header">
           <span className="table-title">Divisas configuradas ({data.length})</span>
         </div>
-        <table className="data-table">
-          <thead>
-            <tr><th>Código</th><th>Nombre</th><th>Símbolo</th><th>Tipo cambio</th><th>Base</th><th>Estado</th><th>Acciones</th></tr>
-          </thead>
-          <tbody>
-            {loading ? <LoadingRows cols={7}/> : data.map((c, i) => {
-              const id = c._id || c.id;
-              return (
-                <tr key={i}>
-                  <td style={{ fontWeight: 600, color: 'var(--gold-pure)', letterSpacing: '.05em' }}>{c.code || c.Code}</td>
-                  <td style={{ color: 'var(--white)' }}>{c.name || c.Name}</td>
-                  <td style={{ fontFamily: 'monospace' }}>{c.symbol || c.Symbol}</td>
-                  <td>Q {fmt(c.exchangeRate || c.ExchangeRate)}</td>
-                  <td><Badge value={(c.baseCurrency || c.BaseCurrency) ? 'Sí' : 'No'}/></td>
-                  <td><Badge value={c.status || c.Status || 'activa'}/></td>
-                  <td>
-                    <div className="action-btns">
-                      <button className="btn-icon danger" title="Eliminar" onClick={() => setConfirm({ id, label: c.code || c.Code })}>
-                        <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
-                          <path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {!loading && data.length === 0 && <EmptyState text="Sin monedas configuradas"/>}
-          </tbody>
-        </table>
+        <div className="data-table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr><th>Código</th><th>Nombre</th><th>Símbolo</th><th>Tipo cambio</th><th>Base</th><th>Estado</th><th>Acciones</th></tr>
+            </thead>
+            <tbody>
+              {loading ? <LoadingRows cols={7}/> : data.map((c, i) => {
+                const id = c._id || c.id;
+                return (
+                  <tr key={i}>
+                    <td style={{ fontWeight: 600, color: 'var(--gold-pure)', letterSpacing: '.05em' }}>{c.code || c.Code}</td>
+                    <td style={{ color: 'var(--white)' }}>{c.name || c.Name}</td>
+                    <td style={{ fontFamily: 'monospace' }}>{c.symbol || c.Symbol}</td>
+                    <td>Q {fmt(c.exchangeRate || c.ExchangeRate)}</td>
+                    <td><Badge value={(c.baseCurrency || c.BaseCurrency) ? 'Sí' : 'No'}/></td>
+                    <td><Badge value={c.status || c.Status || 'activa'}/></td>
+                    <td>
+                      <div className="action-btns">
+                        <button className="btn-icon danger" title="Eliminar" onClick={() => setConfirm({ id, label: c.code || c.Code })}>
+                          <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+                            <path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {!loading && data.length === 0 && <EmptyState text="Sin monedas configuradas"/>}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Modal crear */}

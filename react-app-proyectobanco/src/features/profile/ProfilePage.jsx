@@ -112,10 +112,10 @@ const ProfilePage = () => {
         <div><h1 className="page-title">Mi Perfil</h1><p className="page-subtitle">Información de tu cuenta bancaria</p></div>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'260px 1fr', gap:'1.5rem', alignItems:'start' }}>
+      <div className="profile-grid">
 
         {/* ── Sidebar ── */}
-        <div style={{ ...card, padding:'2rem', textAlign:'center' }}>
+        <div className="profile-sidebar-card" style={{ ...card, padding:'2rem', textAlign:'center' }}>
 
           {/* Avatar con botón de cambio */}
           <div style={{ position:'relative', display:'inline-block', marginBottom:'1.1rem' }}>

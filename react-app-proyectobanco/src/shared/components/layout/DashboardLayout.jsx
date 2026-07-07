@@ -49,11 +49,20 @@ const DashboardLayout = ({ children, activePage, onNavigate, isAdmin }) => {
   const nav = isAdmin ? NAV_ADMIN : NAV_USER;
   const initials = user ? `${(user.username || 'U')[0]}`.toUpperCase() : 'U';
 
+  // ── NUEVO: estado del menú hamburguesa (solo afecta mobile) ──
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const handleLogout = () => { logout(); navigate('/auth/login'); };
+
+  // Al navegar, cerramos el sidebar en mobile (en desktop no tiene efecto visual)
+  const handleNavigate = (key) => {
+    onNavigate(key);
+    setSidebarOpen(false);
+  };
 
   return (
     <div className="dash-shell">
-      <aside className="dash-sidebar">
+      <aside className={`dash-sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
           <div className="sidebar-logo">
             <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
@@ -64,6 +73,16 @@ const DashboardLayout = ({ children, activePage, onNavigate, isAdmin }) => {
             <span className="sidebar-brand-name">Kinal Banks</span>
             <span className="sidebar-brand-role">{isAdmin ? 'Administrador' : 'Cliente'}</span>
           </div>
+          {/* Botón cerrar, solo visible en mobile */}
+          <button
+            className="sidebar-close"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Cerrar menú"
+          >
+            <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </button>
         </div>
 
         <nav className="sidebar-nav">
@@ -74,7 +93,7 @@ const DashboardLayout = ({ children, activePage, onNavigate, isAdmin }) => {
                 <button
                   key={key}
                   className={`nav-item ${activePage === key ? 'active' : ''}`}
-                  onClick={() => onNavigate(key)}
+                  onClick={() => handleNavigate(key)}
                 >
                   {icon}
                   {label}
@@ -94,10 +113,28 @@ const DashboardLayout = ({ children, activePage, onNavigate, isAdmin }) => {
         </div>
       </aside>
 
+      {/* Overlay oscuro detrás del sidebar en mobile */}
+      <div
+        className={`dash-overlay ${sidebarOpen ? 'open' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+      />
+
       <div className="dash-main">
         <header className="dash-topbar">
-          <div>
-            <p className="topbar-title">{isAdmin ? 'Panel Administrativo' : 'Mi Banca'}</p>
+          <div className="topbar-left">
+            {/* Botón hamburguesa, solo visible en mobile */}
+            <button
+              className="btn-hamburger"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Abrir menú"
+            >
+              <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+                <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+              </svg>
+            </button>
+            <div>
+              <p className="topbar-title">{isAdmin ? 'Panel Administrativo' : 'Mi Banca'}</p>
+            </div>
           </div>
           <div className="topbar-right">
             <div className="topbar-user">
@@ -106,7 +143,7 @@ const DashboardLayout = ({ children, activePage, onNavigate, isAdmin }) => {
             </div>
             <div
               className="topbar-avatar"
-              onClick={() => onNavigate('profile')}
+              onClick={() => handleNavigate('profile')}
               style={{ cursor:'pointer' }}
               title="Ver mi perfil"
             >
