@@ -5,7 +5,7 @@ import { initServer} from './configs/apps.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, '.env'), override: true });
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 process.on('uncaughtException', (err) =>{
     console.error('Uncought Exception in Admin Server', err);

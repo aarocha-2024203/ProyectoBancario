@@ -1,4 +1,5 @@
 packages:
+  - 'app-movil-proyectobancario'
   - 'ProyectoBancario3/Auth-Service'
   - 'ProyectoBancario3/ProyectoBancario'
   - 'react-app-proyectobanco'
