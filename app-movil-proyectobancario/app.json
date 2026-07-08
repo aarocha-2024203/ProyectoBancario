@@ -1,10 +1,10 @@
 {
   "expo": {
     "name": "Banco Kinalito",
-    "slug": "Banco Kinalito",
+    "slug": "banco-kinal",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/splash.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
@@ -26,15 +26,22 @@
       "package": "com.proyectobancario.clientuser"
     },
     "web": {
-      "favicon": "./assets/favicon.png",
+      "favicon": "./assets/splash.png",
       "bundler": "metro",
       "output": "single",
       "entry": "index.js"
     },
     "plugins": [
       "expo-secure-store",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-font"
     ],
-    "scheme": "Banco Kinalito"
+    "scheme": "Banco Kinalito",
+    "extra": {
+      "eas": {
+        "projectId": "f7a482c2-f974-4fb5-8644-6fdc2a80574e"
+      }
+    },
+    "owner": "proyecto-bancario-2026-g3"
   }
 }
