@@ -4,7 +4,7 @@ packages:
   - 'ProyectoBancario3/ProyectoBancario'
   - 'react-app-proyectobanco'
 
-onlyBuiltDependencies:
-  - argon2
-  - esbuild
-
+allowBuilds:
+  argon2: true
+  esbuild: true
+  '@scarf/scarf': false
