@@ -3,3 +3,8 @@ packages:
   - 'ProyectoBancario3/Auth-Service'
   - 'ProyectoBancario3/ProyectoBancario'
   - 'react-app-proyectobanco'
+
+allowBuilds:
+  argon2: true
+  esbuild: true
+  '@scarf/scarf': false
